@@ -119,8 +119,14 @@ async function reimprimir(id) {
   const t = tickets.get(id);
   t.impressao = 'pendente';
   render();
-  const res = await fetch(`/api/tickets/${id}/imprimir`, { method: 'POST' });
-  if (res.ok) receber(await res.json(), false);
+  const res = await fetch(`/api/tickets/${id}/imprimir`, { method: 'POST' }).catch(() => null);
+  if (res && res.ok) {
+    receber(await res.json(), false);
+  } else {
+    // Sem isso o card ficaria preso em "Imprimindo…" (ex.: servidor desatualizado ou fora do ar).
+    t.impressao = 'falhou';
+    render();
+  }
   if ($('#imprimir-local').checked) imprimirNoNavegador(t);
 }
 

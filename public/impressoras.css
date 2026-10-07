@@ -127,3 +127,8 @@ button { font: inherit; cursor: pointer; }
 .historico .h-hora { color: var(--suave); font-size: 13px; font-variant-numeric: tabular-nums; }
 .historico .h-status.falhou { color: var(--vermelho); font-weight: 700; }
 .historico .vazio { color: var(--suave); font-size: 14px; padding: 6px 2px; }
+.falha-geral {
+  grid-column: 1 / -1; background: #fde8e6; color: #8c1d17; border-radius: 12px;
+  padding: 16px 18px; font-weight: 600; line-height: 1.5;
+}
+.falha-geral code { background: #fff; padding: 1px 6px; border-radius: 6px; }

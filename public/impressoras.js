@@ -71,6 +71,7 @@ function mostrarErro(imp, job) {
   const el = $('.erro-impressora', imp.el);
   el.hidden = false;
   el.textContent = `⚠ Falha ao imprimir ${job.numeroPedido ? `pedido #${job.numeroPedido}` : 'teste'}: ${job.erro}`;
+  setLed(imp);
   imp.falhou = true;
 }
 
@@ -159,7 +160,10 @@ function criarImpressora(estado) {
   $('.teste', el).addEventListener('click', async (e) => {
     e.target.disabled = true;
     try {
-      await fetch(`/api/impressoras/${estado.cozinhaId}/teste`, { method: 'POST' });
+      const res = await fetch(`/api/impressoras/${estado.cozinhaId}/teste`, { method: 'POST' });
+      if (!res.ok) throw new Error(`o servidor respondeu ${res.status}`);
+    } catch (err) {
+      mostrarErro(imp, { erro: `${err.message}. Se o servidor foi atualizado, reinicie-o (Ctrl+C e npm start).` });
     } finally {
       setTimeout(() => (e.target.disabled = false), 800);
     }
@@ -179,8 +183,14 @@ function criarImpressora(estado) {
 }
 
 async function carregar() {
-  const lista = await (await fetch('/api/impressoras')).json();
   const raiz = $('#impressoras');
+  const res = await fetch('/api/impressoras').catch(() => null);
+  if (!res || !res.ok) {
+    raiz.innerHTML = `<p class="falha-geral">Não foi possível carregar as impressoras${res ? ` (o servidor respondeu ${res.status})` : ''}.
+      Se o sistema foi atualizado, reinicie o servidor: <code>Ctrl+C</code> e <code>npm start</code>.</p>`;
+    return;
+  }
+  const lista = await res.json();
   raiz.innerHTML = '';
   impressoras.clear();
   for (const estado of lista) {
@@ -211,4 +221,5 @@ function conectar() {
 }
 
 $('#som').addEventListener('click', alternarSom);
+carregar();
 conectar();
