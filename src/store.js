@@ -187,6 +187,24 @@ function criarStore() {
     return pedidos.slice(-limite).reverse().map(comTickets);
   }
 
+  function resumo() {
+    const validos = pedidos.filter((p) => !p.cancelado);
+    const porCozinha = {};
+    for (const id of Object.keys(cozinhas)) {
+      const daCozinha = tickets.filter((t) => t.cozinhaId === Number(id));
+      porCozinha[id] = Object.fromEntries(
+        [...STATUS, 'cancelado'].map((s) => [s, daCozinha.filter((t) => t.status === s).length])
+      );
+    }
+    return {
+      pedidos: validos.length,
+      cancelados: pedidos.length - validos.length,
+      faturamento: Math.round(validos.reduce((s, p) => s + p.total, 0) * 100) / 100,
+      ticketMedio: validos.length ? Math.round((validos.reduce((s, p) => s + p.total, 0) / validos.length) * 100) / 100 : 0,
+      porCozinha,
+    };
+  }
+
   // Persistência: o servidor salva/carrega este retrato em disco.
   function exportar() {
     return { proximoNumero, proximoTicket, pedidos, tickets };
@@ -208,6 +226,7 @@ function criarStore() {
     cancelarPedido,
     ticketsDaCozinha,
     pedidosRecentes,
+    resumo,
     exportar,
     importar,
   };

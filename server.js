@@ -157,10 +157,17 @@ function redirecionar(res, destino) {
   res.end();
 }
 
+// IPs da rede local, com Wi-Fi/Ethernet primeiro. Adaptadores virtuais (WSL, Docker,
+// VirtualBox...) ficam de fora: o celular não alcança esses endereços.
+const ADAPTADOR_VIRTUAL = /vethernet|wsl|hyper-v|docker|virtualbox|vmware|vbox|loopback|tailscale|zerotier/i;
+const ADAPTADOR_FISICO = /wi-?fi|wlan|wireless|ethernet|^en|^eth/i;
+
 function enderecosLocais() {
-  return Object.values(os.networkInterfaces())
-    .flat()
-    .filter((i) => i && i.family === 'IPv4' && !i.internal)
+  return Object.entries(os.networkInterfaces())
+    .filter(([nome]) => !ADAPTADOR_VIRTUAL.test(nome))
+    .flatMap(([nome, lista]) => lista.map((i) => ({ nome, ...i })))
+    .filter((i) => i.family === 'IPv4' && !i.internal)
+    .sort((a, b) => ADAPTADOR_FISICO.test(b.nome) - ADAPTADOR_FISICO.test(a.nome))
     .map((i) => i.address);
 }
 
@@ -176,6 +183,8 @@ async function rotear(req, res) {
   if (get && p === '/api/info') {
     return json(res, 200, { loja, porta: PORTA, enderecos: enderecosLocais(), cozinhas: Object.values(cozinhas) });
   }
+
+  if (get && p === '/api/resumo') return json(res, 200, store.resumo());
 
   // Pedidos
   if (get && p === '/api/pedidos') return json(res, 200, store.pedidosRecentes());
@@ -216,6 +225,7 @@ async function rotear(req, res) {
   // Atalhos de página
   if ((m = p.match(/^\/cozinha\/(\d+)\/?$/))) return redirecionar(res, `/cozinha.html?id=${m[1]}`);
   if (p === '/impressoras') return redirecionar(res, '/impressoras.html');
+  if (p === '/painel') return redirecionar(res, '/painel.html');
 
   if (get && !p.startsWith('/api/')) return servirArquivo(res, p);
   return json(res, 404, { erro: 'Rota não encontrada' });
@@ -237,6 +247,7 @@ if (require.main === module) {
   servidor.listen(PORTA, () => {
     const ip = enderecosLocais()[0] || 'localhost';
     console.log(`\n  ${loja.nome} - sistema de pedidos\n`);
+    console.log(`  Painel:            http://localhost:${PORTA}/painel`);
     console.log(`  Garçom (celular):  http://${ip}:${PORTA}/`);
     console.log(`  Cozinha 1:         http://${ip}:${PORTA}/cozinha/1`);
     console.log(`  Cozinha 2:         http://${ip}:${PORTA}/cozinha/2`);

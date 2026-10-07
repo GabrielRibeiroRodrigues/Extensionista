@@ -121,3 +121,17 @@ test('exporta e importa o estado mantendo a numeração', () => {
   assert.equal(copia.ticketsDaCozinha(1).length, 1);
   assert.equal(copia.criarPedido({ mesa: '2', itens: [{ produtoId: 'p1', qtd: 1 }] }).numero, 2);
 });
+
+test('resumo soma faturamento sem os cancelados e conta tickets por cozinha', () => {
+  const store = criarStore();
+  store.criarPedido({ mesa: '1', itens: [{ produtoId: 'p1', qtd: 1 }, { produtoId: 'm1', qtd: 1 }] });
+  const cancelado = store.criarPedido({ mesa: '2', itens: [{ produtoId: 'p2', qtd: 1 }] });
+  store.cancelarPedido(cancelado.id);
+
+  const r = store.resumo();
+  assert.equal(r.pedidos, 1);
+  assert.equal(r.cancelados, 1);
+  assert.equal(r.faturamento, 89.8);
+  assert.deepEqual(r.porCozinha['1'], { novo: 1, preparo: 0, pronto: 0, cancelado: 1 });
+  assert.deepEqual(r.porCozinha['2'], { novo: 1, preparo: 0, pronto: 0, cancelado: 0 });
+});

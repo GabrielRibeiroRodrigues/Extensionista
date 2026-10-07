@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel</title>
+  <link rel="icon" href="/icone.svg">
+  <style>
+    :root {
+      --vermelho: #b3261e; --azul: #1f5fa8; --creme: #f7f2ea; --papel: #fff; --tinta: #2b2118;
+      --suave: #7a6a5c; --linha: #e9dfd2; --verde: #2e7d32; --amarelo: #b26a00;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--tinta); background: var(--creme);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--creme); }
+    .faixa { background: var(--vermelho); color: #fff; padding: 28px 24px 70px; }
+    .faixa > div, main { max-width: 1040px; margin: 0 auto; }
+    .faixa small { text-transform: uppercase; letter-spacing: 2px; opacity: .8; font-size: 12px; }
+    .faixa h1 { margin: 4px 0 0; font-size: 30px; }
+    main { padding: 0 24px 40px; margin-top: -48px; }
+
+    .numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+    .numero { background: var(--papel); border-radius: 14px; padding: 16px 18px; box-shadow: 0 2px 10px rgba(43,33,24,.08); }
+    .numero span { display: block; color: var(--suave); font-size: 13px; font-weight: 600; }
+    .numero b { display: block; font-size: 28px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--suave); margin: 28px 0 10px; }
+    .telas { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+    .tela {
+      display: flex; flex-direction: column; gap: 6px; background: var(--papel); border-radius: 14px; padding: 18px;
+      text-decoration: none; color: inherit; border: 1.5px solid transparent; box-shadow: 0 2px 10px rgba(43,33,24,.06);
+    }
+    .tela:hover { border-color: var(--vermelho); }
+    .tela .icone { font-size: 26px; }
+    .tela strong { font-size: 18px; }
+    .tela p { margin: 0; color: var(--suave); font-size: 14px; flex: 1; }
+    .tela code { font-size: 13px; background: var(--creme); padding: 6px 8px; border-radius: 8px; word-break: break-all; }
+    .fila { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    .fila span { font-size: 12px; font-weight: 700; color: #fff; padding: 2px 9px; border-radius: 99px; }
+    .fila .novo { background: var(--amarelo); }
+    .fila .preparo { background: var(--azul); }
+    .fila .pronto { background: var(--verde); }
+
+    .dica { margin-top: 28px; background: var(--papel); border-radius: 14px; padding: 16px 18px; color: var(--suave); font-size: 14px; line-height: 1.5; }
+    .dica b { color: var(--tinta); }
+  </style>
+</head>
+<body>
+  <header class="faixa">
+    <div>
+      <small id="subtitulo">Sistema de pedidos</small>
+      <h1 id="loja">Pizzaria</h1>
+    </div>
+  </header>
+
+  <main>
+    <section class="numeros">
+      <div class="numero"><span>Pedidos</span><b id="r-pedidos">–</b></div>
+      <div class="numero"><span>Faturamento</span><b id="r-faturamento">–</b></div>
+      <div class="numero"><span>Ticket médio</span><b id="r-medio">–</b></div>
+      <div class="numero"><span>Cancelados</span><b id="r-cancelados">–</b></div>
+    </section>
+
+    <h2>Telas</h2>
+    <section id="telas" class="telas"></section>
+
+    <p class="dica">
+      <b>Para usar no celular:</b> conecte o celular ao mesmo Wi-Fi deste computador e abra o endereço da tela do garçom.
+      No navegador do celular, use “Adicionar à tela inicial” para abrir como aplicativo.
+    </p>
+  </main>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const brl = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    let info;
+
+    function base() {
+      const ip = info.enderecos[0];
+      return ip && location.hostname === 'localhost' ? `http://${ip}:${info.porta}` : location.origin;
+    }
+
+    function renderTelas(resumo) {
+      const b = base();
+      const cards = [
+        { icone: '📱', titulo: 'Garçom', texto: 'Celular: monta e envia os pedidos.', url: `${b}/` },
+        ...info.cozinhas.map((c) => {
+          const f = resumo.porCozinha[c.id];
+          return {
+            icone: c.id === 1 ? '🍕' : '🍝',
+            titulo: `${c.nome} · ${c.setor}`,
+            texto: 'Tela da cozinha com os pedidos em tempo real.',
+            url: `${b}/cozinha/${c.id}`,
+            fila: `<span class="novo">${f.novo} na fila</span><span class="preparo">${f.preparo} em preparo</span><span class="pronto">${f.pronto} prontos</span>`,
+          };
+        }),
+        { icone: '🖨️', titulo: 'Impressoras', texto: 'Simulação do que sai em cada impressora.', url: `${b}/impressoras` },
+      ];
+      $('#telas').innerHTML = cards.map((c) => `
+        <a class="tela" href="${c.url}" target="_blank">
+          <span class="icone">${c.icone}</span>
+          <strong>${c.titulo}</strong>
+          <p>${c.texto}</p>
+          ${c.fila ? `<div class="fila">${c.fila}</div>` : ''}
+          <code>${c.url}</code>
+        </a>`).join('');
+    }
+
+    async function atualizar() {
+      try {
+        const r = await (await fetch('/api/resumo')).json();
+        $('#r-pedidos').textContent = r.pedidos;
+        $('#r-faturamento').textContent = brl(r.faturamento);
+        $('#r-medio').textContent = brl(r.ticketMedio);
+        $('#r-cancelados').textContent = r.cancelados;
+        renderTelas(r);
+      } catch {}
+    }
+
+    (async () => {
+      info = await (await fetch('/api/info')).json();
+      $('#loja').textContent = info.loja.nome;
+      $('#subtitulo').textContent = `${info.loja.subtitulo} · Sistema de pedidos`;
+      document.title = `${info.loja.nome} · Painel`;
+      await atualizar();
+      setInterval(atualizar, 5000);
+    })();
+  </script>
+</body>
+</html>
