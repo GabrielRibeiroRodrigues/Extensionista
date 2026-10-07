@@ -1,0 +1,15 @@
+{
+  "name": "pizzaria-pedidos",
+  "version": "1.0.0",
+  "description": "Pedidos pelo celular enviados para as telas e impressoras das cozinhas",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
