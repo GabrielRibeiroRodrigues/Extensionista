@@ -3,6 +3,8 @@
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const hora = (iso) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+// "12" vira "Mesa 12"; textos livres (ex.: "Delivery - João") aparecem como estão.
+const rotuloMesa = (m) => (/^\d+$/.test(m) ? `Mesa ${m}` : m);
 
 const params = new URLSearchParams(location.search);
 const COZINHA_ID = Number(params.get('id')) || 1;
@@ -43,7 +45,7 @@ function htmlTicket(t) {
     <article class="${classes.join(' ')}" data-id="${t.id}">
       <header>
         <div>
-          <div class="mesa">Mesa ${esc(t.mesa)}</div>
+          <div class="mesa">${esc(rotuloMesa(t.mesa))}</div>
           <div class="numero">Pedido #${t.numeroPedido} · ${hora(t.criadoEm)}${t.garcom ? ` · ${esc(t.garcom)}` : ''}</div>
         </div>
         <div class="tempo" data-tempo="${t.criadoEm}">${min} min</div>
@@ -71,7 +73,7 @@ function render() {
     ? ativos.map(htmlTicket).join('')
     : '<p class="vazio">Nenhum pedido na fila 🎉</p>';
   $('#lista-prontos').innerHTML = prontos
-    .map((t) => `<button class="chip-pronto" data-id="${t.id}" title="Tocar para voltar ao preparo">Mesa ${esc(t.mesa)} <small>#${t.numeroPedido}</small></button>`)
+    .map((t) => `<button class="chip-pronto" data-id="${t.id}" title="Tocar para voltar ao preparo">${esc(rotuloMesa(t.mesa))} <small>#${t.numeroPedido}</small></button>`)
     .join('');
   $('#n-novo').textContent = ativos.filter((t) => t.status === 'novo').length;
   $('#n-preparo').textContent = ativos.filter((t) => t.status === 'preparo').length;
@@ -124,7 +126,7 @@ function processarFila() {
   $('#area-impressao').innerHTML = `
     <h2>${esc(t.cozinhaNome.toUpperCase())}</h2>
     <div class="grande">PEDIDO #${t.numeroPedido}</div>
-    <div class="grande">MESA ${esc(t.mesa)}</div>
+    <div class="grande">${esc(rotuloMesa(t.mesa).toUpperCase())}</div>
     <hr>
     <p>Hora: ${hora(t.criadoEm)}${t.garcom ? ` · Garçom: ${esc(t.garcom)}` : ''}</p>
     <hr>

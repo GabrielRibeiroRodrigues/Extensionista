@@ -5,6 +5,8 @@ const $ = (sel) => document.querySelector(sel);
 const brl = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const hora = (iso) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+// "12" vira "Mesa 12"; textos livres (ex.: "Delivery - João") aparecem como estão.
+const rotuloMesa = (m) => (/^\d+$/.test(m) ? `Mesa ${m}` : m);
 const ROTULO_STATUS = { novo: 'Na fila', preparo: 'Preparando', pronto: 'Pronto' };
 
 const estado = {
@@ -187,7 +189,7 @@ function renderPedidos() {
   $('#lista-pedidos').innerHTML = lista.length
     ? lista.map((p) => `
       <article class="pedido-card">
-        <header><h4>#${p.numero} · Mesa ${esc(p.mesa)}</h4><time>${hora(p.criadoEm)}</time></header>
+        <header><h4>#${p.numero} · ${esc(rotuloMesa(p.mesa))}</h4><time>${hora(p.criadoEm)}</time></header>
         ${p.tickets.map((t) => `
           <div class="status-linha">
             <span>${esc(t.cozinhaNome)} · ${t.itens.reduce((s, i) => s + i.qtd, 0)} itens</span>
@@ -211,7 +213,7 @@ function conectarTempoReal() {
     const anterior = pedido.tickets.find((t) => t.id === ticket.id);
     pedido.tickets = pedido.tickets.map((t) => (t.id === ticket.id ? ticket : t));
     if (anterior && anterior.status !== 'pronto' && ticket.status === 'pronto') {
-      avisar(`Mesa ${ticket.mesa}: ${ticket.cozinhaNome.split(' - ')[1]} pronto!`, 'ok');
+      avisar(`${rotuloMesa(ticket.mesa)}: ${ticket.cozinhaNome.split(' - ')[1]} pronto!`, 'ok');
       if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
     }
     renderPedidos();

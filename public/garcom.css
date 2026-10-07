@@ -15,7 +15,7 @@
   background: var(--creme);
 }
 * { box-sizing: border-box; }
-body { margin: 0; padding-bottom: 96px; background: var(--creme); }
+body { margin: 0; padding-bottom: 96px; background: var(--creme); overflow-x: hidden; }
 button { font: inherit; cursor: pointer; }
 [hidden] { display: none !important; }
 
@@ -34,11 +34,11 @@ button { font: inherit; cursor: pointer; }
 .aba.ativa { opacity: 1; border-color: #fff; }
 .badge { background: #fff; color: var(--vermelho); border-radius: 99px; padding: 1px 7px; font-size: 12px; margin-left: 4px; }
 
-.identificacao { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 16px 4px; }
+.identificacao { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; padding: 14px 16px 4px; }
 .identificacao label { font-size: 12px; color: var(--suave); font-weight: 600; display: grid; gap: 4px; }
 .identificacao input {
   font-size: 18px; padding: 10px 12px; border: 1.5px solid var(--linha);
-  border-radius: 10px; background: var(--papel); color: var(--tinta); width: 100%;
+  border-radius: 10px; background: var(--papel); color: var(--tinta); width: 100%; min-width: 0;
 }
 .identificacao input:focus { outline: none; border-color: var(--vermelho); }
 .identificacao input.erro { border-color: var(--vermelho); background: #fff1f0; }

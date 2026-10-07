@@ -55,7 +55,8 @@ function montar(ticket, fmt) {
   const out = [];
   out.push(fmt.centro + fmt.duplo + semAcento(ticket.cozinhaNome.toUpperCase()) + fmt.normal);
   out.push(fmt.duplo + `PEDIDO #${ticket.numeroPedido}` + fmt.normal);
-  out.push(fmt.negritoOn + semAcento(`MESA: ${ticket.mesa}`) + fmt.negritoOff + fmt.esquerda);
+  const mesa = /^\d+$/.test(ticket.mesa) ? `MESA: ${ticket.mesa}` : ticket.mesa.toUpperCase();
+  out.push(fmt.negritoOn + semAcento(mesa) + fmt.negritoOff + fmt.esquerda);
   out.push(sep);
   out.push(semAcento(`Hora: ${hora(ticket.criadoEm)}` + (ticket.garcom ? `   Garcom: ${ticket.garcom}` : '')));
   out.push(sep);
