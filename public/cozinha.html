@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cozinha</title>
+  <link rel="icon" href="/icone.svg">
+  <link rel="stylesheet" href="/cozinha.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="titulo">
+      <h1 id="nome-cozinha">Cozinha</h1>
+      <span id="conexao" class="conexao off" title="Conexão com o servidor">desconectado</span>
+    </div>
+    <div class="contadores">
+      <span><b id="n-novo">0</b> na fila</span>
+      <span><b id="n-preparo">0</b> em preparo</span>
+    </div>
+    <div class="acoes">
+      <label class="interruptor" title="Abre a impressão do navegador a cada pedido novo (use com impressora USB neste computador)">
+        <input type="checkbox" id="imprimir-local"> Imprimir neste PC
+      </label>
+      <a id="trocar" class="link" href="#"></a>
+      <time id="relogio"></time>
+    </div>
+  </header>
+
+  <main id="tickets" class="tickets"></main>
+
+  <footer class="prontos">
+    <span class="rotulo">Prontos</span>
+    <div id="lista-prontos"></div>
+  </footer>
+
+  <div id="ativar" class="ativar">
+    <button id="botao-ativar">
+      <strong id="ativar-titulo">Abrir tela da cozinha</strong>
+      <span>Toque para ativar o som de novos pedidos</span>
+    </button>
+  </div>
+
+  <div id="area-impressao" class="area-impressao" aria-hidden="true"></div>
+
+  <script src="/cozinha.js"></script>
+</body>
+</html>
