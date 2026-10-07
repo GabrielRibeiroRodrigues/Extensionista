@@ -8,6 +8,7 @@ const { criarStore, ErroValidacao } = require('./src/store');
 const { loja, cozinhas, cardapioPublico } = require('./src/menu');
 const impressora = require('./src/impressora');
 const { popularExemplos } = require('./src/seed');
+const { ligarPersistencia } = require('./src/persistencia');
 
 const PORTA = Number(process.env.PORT) || 3000;
 const PUBLICO = path.join(__dirname, 'public');
@@ -229,7 +230,10 @@ const servidor = http.createServer((req, res) => {
 });
 
 if (require.main === module) {
-  if (process.env.SEM_EXEMPLOS !== '1') popularExemplos(store);
+  const arquivoDados = process.env.ARQUIVO_DADOS || path.join(__dirname, 'dados', 'pedidos.json');
+  const { restaurado } = ligarPersistencia(store, arquivoDados);
+  if (restaurado) console.log(`\n  Pedidos restaurados de ${arquivoDados}`);
+  else if (process.env.SEM_EXEMPLOS !== '1') popularExemplos(store);
   servidor.listen(PORTA, () => {
     const ip = enderecosLocais()[0] || 'localhost';
     console.log(`\n  ${loja.nome} - sistema de pedidos\n`);
