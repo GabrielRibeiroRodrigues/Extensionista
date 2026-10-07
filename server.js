@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { criarStore, ErroValidacao } = require('./src/store');
-const { cozinhas, categorias, produtos } = require('./src/menu');
+const { cozinhas, cardapioPublico } = require('./src/menu');
 const { imprimir } = require('./src/impressora');
 const { popularExemplos } = require('./src/seed');
 
@@ -57,9 +57,9 @@ store.eventos.on('ticket:atualizado', (ticket) => {
   transmitir(`cozinha:${ticket.cozinhaId}`, 'ticket', ticket);
   transmitir('garcom', 'ticket', ticket);
 });
-store.eventos.on('pedido', (pedido) => {
-  transmitir('garcom', 'pedido', { ...pedido, tickets: pedido.ticketIds.map(store.buscarTicket) });
-});
+store.eventos.on('pedido', (pedido) => transmitir('garcom', 'pedido', pedido));
+store.eventos.on('pedido:atualizado', (pedido) => transmitir('garcom', 'pedido', pedido));
+store.eventos.on('ticket:cancelado', (ticket) => transmitir(`cozinha:${ticket.cozinhaId}`, 'ticket', ticket));
 
 async function enviarParaImpressora(ticket) {
   try {
@@ -112,14 +112,17 @@ async function rotear(req, res) {
   let m;
 
   if (req.method === 'GET' && p === '/api/menu') {
-    return json(res, 200, { cozinhas, categorias, produtos });
+    return json(res, 200, cardapioPublico());
   }
   if (req.method === 'GET' && p === '/api/pedidos') {
     return json(res, 200, store.pedidosRecentes());
   }
   if (req.method === 'POST' && p === '/api/pedidos') {
-    const pedido = store.criarPedido(await lerCorpo(req));
-    return json(res, 201, { ...pedido, tickets: pedido.ticketIds.map(store.buscarTicket) });
+    return json(res, 201, store.criarPedido(await lerCorpo(req)));
+  }
+  if ((m = p.match(/^\/api\/pedidos\/(\d+)\/cancelar$/)) && req.method === 'POST') {
+    const pedido = store.cancelarPedido(m[1]);
+    return pedido ? json(res, 200, pedido) : json(res, 404, { erro: 'Pedido não encontrado' });
   }
   if (req.method === 'GET' && p === '/api/garcom/stream') {
     return abrirStream(req, res, 'garcom');

@@ -1,14 +1,23 @@
 // Dados mockados do cardápio. Cada categoria aponta para a cozinha que prepara.
 // cozinha: null => item não vai para cozinha (servido no balcão/bar).
 
+const loja = { nome: 'Bella Massa', subtitulo: 'Pizzaria & Cantina' };
+
 const cozinhas = {
   1: { id: 1, nome: 'Cozinha 1', setor: 'Pizzas' },
   2: { id: 2, nome: 'Cozinha 2', setor: 'Massas' },
 };
 
+// Preço cheio do produto = Grande; os demais tamanhos aplicam o fator.
+const tamanhos = [
+  { id: 'B', nome: 'Broto', fatias: 4, fator: 0.6 },
+  { id: 'M', nome: 'Média', fatias: 6, fator: 0.85 },
+  { id: 'G', nome: 'Grande', fatias: 8, fator: 1 },
+];
+
 const categorias = [
-  { id: 'pizzas', nome: 'Pizzas', cozinha: 1 },
-  { id: 'pizzas-doces', nome: 'Pizzas Doces', cozinha: 1 },
+  { id: 'pizzas', nome: 'Pizzas', cozinha: 1, temTamanho: true, meioAMeio: true },
+  { id: 'pizzas-doces', nome: 'Pizzas Doces', cozinha: 1, temTamanho: true, meioAMeio: true },
   { id: 'massas', nome: 'Massas', cozinha: 2 },
   { id: 'bebidas', nome: 'Bebidas', cozinha: null },
 ];
@@ -32,9 +41,45 @@ const produtos = [
   { id: 'b3', categoria: 'bebidas', nome: 'Água Mineral', descricao: '500 ml', preco: 4.5 },
 ];
 
+function categoriaDoProduto(produto) {
+  return categorias.find((c) => c.id === produto.categoria) || null;
+}
+
 function cozinhaDoProduto(produto) {
-  const categoria = categorias.find((c) => c.id === produto.categoria);
+  const categoria = categoriaDoProduto(produto);
   return categoria ? categoria.cozinha : null;
 }
 
-module.exports = { cozinhas, categorias, produtos, cozinhaDoProduto };
+// Arredonda para o "x,90" de cardápio: 29,94 -> 29,90; 42,41 -> 42,90.
+function precoNoTamanho(produto, tamanhoId) {
+  const tamanho = tamanhos.find((t) => t.id === tamanhoId);
+  if (!tamanho || tamanho.fator === 1) return produto.preco;
+  return Math.floor(produto.preco * tamanho.fator) + 0.9;
+}
+
+// Cardápio como a API entrega: pizzas já trazem o preço de cada tamanho.
+function cardapioPublico() {
+  return {
+    loja,
+    cozinhas,
+    tamanhos: tamanhos.map(({ id, nome, fatias }) => ({ id, nome, fatias })),
+    categorias,
+    produtos: produtos.map((p) =>
+      categoriaDoProduto(p).temTamanho
+        ? { ...p, precos: Object.fromEntries(tamanhos.map((t) => [t.id, precoNoTamanho(p, t.id)])) }
+        : p
+    ),
+  };
+}
+
+module.exports = {
+  loja,
+  cozinhas,
+  tamanhos,
+  categorias,
+  produtos,
+  categoriaDoProduto,
+  cozinhaDoProduto,
+  precoNoTamanho,
+  cardapioPublico,
+};
