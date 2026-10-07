@@ -2,18 +2,30 @@
 // que divide entre as cozinhas.
 
 const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => [...document.querySelectorAll(sel)];
 const brl = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const hora = (iso) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-// "12" vira "Mesa 12"; textos livres (ex.: "Delivery - João") aparecem como estão.
-const rotuloMesa = (m) => (/^\d+$/.test(m) ? `Mesa ${m}` : m);
-const ROTULO_STATUS = { novo: 'Na fila', preparo: 'Preparando', pronto: 'Pronto' };
+const normalizar = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+const ROTULO_STATUS = { novo: 'Na fila', preparo: 'Preparando', pronto: 'Pronto', cancelado: 'Cancelado' };
+const TIPOS = {
+  mesa: { rotulo: 'Nº da mesa', placeholder: 'Ex.: 12', modo: 'numeric', max: 3 },
+  balcao: { rotulo: 'Nome do cliente', placeholder: 'Ex.: Ana', modo: 'text', max: 30 },
+  delivery: { rotulo: 'Nome do cliente', placeholder: 'Ex.: João', modo: 'text', max: 30 },
+};
 
 const estado = {
   menu: null,
-  carrinho: new Map(), // produtoId -> { qtd, obs }
+  tipo: 'mesa',
+  linhas: [], // { id, produtoId, metadeId, tamanho, qtd, obs }
+  pizza: null, // pizza sendo personalizada
   pedidos: [],
+  filtro: 'meus',
+  busca: '',
+  prontosNaoVistos: 0,
 };
+let proximaLinha = 1;
 
 function guardar(chave, valor) {
   try { localStorage.setItem(chave, valor); } catch {}
@@ -22,9 +34,68 @@ function lerGuardado(chave) {
   try { return localStorage.getItem(chave) || ''; } catch { return ''; }
 }
 
-// ---------- Cardápio ----------
-function cozinhaDaCategoria(catId) {
-  return estado.menu.categorias.find((c) => c.id === catId).cozinha;
+// ---------- Cardápio: consultas ----------
+const produto = (id) => estado.menu.produtos.find((p) => p.id === id);
+const categoria = (id) => estado.menu.categorias.find((c) => c.id === id);
+const tamanho = (id) => estado.menu.tamanhos.find((t) => t.id === id);
+const ehPizza = (p) => !!categoria(p.categoria).temTamanho;
+
+function precoLinha(l) {
+  const sabores = [produto(l.produtoId), l.metadeId && produto(l.metadeId)].filter(Boolean);
+  return Math.max(...sabores.map((p) => (p.precos ? p.precos[l.tamanho] : p.preco)));
+}
+
+function nomeLinha(l) {
+  const p = produto(l.produtoId);
+  return l.metadeId ? `½ ${p.nome} + ½ ${produto(l.metadeId).nome}` : p.nome;
+}
+
+function cozinhaDaLinha(l) {
+  return categoria(produto(l.produtoId).categoria).cozinha || 0;
+}
+
+function totais() {
+  return estado.linhas.reduce(
+    (acc, l) => ({ qtd: acc.qtd + l.qtd, total: acc.total + precoLinha(l) * l.qtd }),
+    { qtd: 0, total: 0 }
+  );
+}
+
+// ---------- Carrinho: alterações ----------
+function adicionarLinha(nova) {
+  const igual = estado.linhas.find((l) =>
+    l.produtoId === nova.produtoId && l.metadeId === nova.metadeId && l.tamanho === nova.tamanho && l.obs === nova.obs);
+  if (igual) igual.qtd += nova.qtd;
+  else estado.linhas.push({ id: proximaLinha++, ...nova });
+  atualizarTudo();
+}
+
+function alterarLinha(id, delta) {
+  const linha = estado.linhas.find((l) => l.id === id);
+  if (!linha) return;
+  linha.qtd += delta;
+  if (linha.qtd <= 0) estado.linhas = estado.linhas.filter((l) => l !== linha);
+  atualizarTudo();
+}
+
+// Itens simples (sem tamanho) usam o "+/−" direto no card do cardápio.
+function alterarSimples(produtoId, delta) {
+  const linha = estado.linhas.find((l) => l.produtoId === produtoId && !l.obs);
+  if (linha) return alterarLinha(linha.id, delta);
+  if (delta > 0) adicionarLinha({ produtoId, metadeId: null, tamanho: null, qtd: 1, obs: '' });
+}
+
+function atualizarTudo() {
+  renderProdutos();
+  renderBarra();
+  if (!$('#carrinho').hidden) renderCarrinho();
+}
+
+// ---------- Render: cardápio ----------
+function renderCategorias() {
+  $('#categorias').innerHTML = estado.menu.categorias
+    .map((c, i) => `<button class="chip${i === 0 ? ' ativa' : ''}" data-cat="${c.id}">${esc(c.nome)}</button>`)
+    .join('');
 }
 
 function rotuloCozinha(cozinhaId) {
@@ -33,119 +104,176 @@ function rotuloCozinha(cozinhaId) {
   return `<span class="tag-cozinha c${c.id}">${esc(c.nome)}</span>`;
 }
 
-function renderCardapio() {
-  const { categorias, produtos } = estado.menu;
-  $('#categorias').innerHTML = categorias
-    .map((c, i) => `<button class="chip${i === 0 ? ' ativa' : ''}" data-cat="${c.id}">${esc(c.nome)}</button>`)
-    .join('');
-
-  $('#produtos').innerHTML = categorias.map((c) => `
-    <section class="grupo" id="cat-${c.id}">
-      <h3>${esc(c.nome)} ${rotuloCozinha(c.cozinha)}</h3>
-      ${produtos.filter((p) => p.categoria === c.id).map(htmlProduto).join('')}
-    </section>`).join('');
-}
-
 function htmlProduto(p) {
-  const item = estado.carrinho.get(p.id);
-  const qtd = item ? item.qtd : 0;
+  if (ehPizza(p)) {
+    const qtd = estado.linhas.filter((l) => l.produtoId === p.id).reduce((s, l) => s + l.qtd, 0);
+    return `
+      <article class="produto${qtd ? ' no-carrinho' : ''}" data-pizza="${p.id}">
+        <div class="info">
+          <div class="nome">${esc(p.nome)}</div>
+          <div class="desc">${esc(p.descricao)}</div>
+          <div class="preco"><small>a partir de</small> ${brl(p.precos.B)}</div>
+          ${qtd ? `<div class="no-pedido">${qtd} no pedido</div>` : ''}
+        </div>
+        <div class="passo"><button class="mais" data-abrir-pizza aria-label="Escolher ${esc(p.nome)}">+</button></div>
+      </article>`;
+  }
+  const linha = estado.linhas.find((l) => l.produtoId === p.id && !l.obs);
+  const qtd = linha ? linha.qtd : 0;
   return `
-    <article class="produto${qtd ? ' no-carrinho' : ''}" data-produto="${p.id}">
+    <article class="produto${qtd ? ' no-carrinho' : ''}" data-simples="${p.id}">
       <div class="info">
         <div class="nome">${esc(p.nome)}</div>
         <div class="desc">${esc(p.descricao)}</div>
         <div class="preco">${brl(p.preco)}</div>
       </div>
       <div class="passo">
-        ${qtd ? `<button class="menos" data-acao="menos" aria-label="Remover">−</button><b>${qtd}</b>` : ''}
-        <button class="mais" data-acao="mais" aria-label="Adicionar">+</button>
+        ${qtd ? `<button data-simples-delta="-1" aria-label="Remover">−</button><b>${qtd}</b>` : ''}
+        <button class="mais" data-simples-delta="1" aria-label="Adicionar ${esc(p.nome)}">+</button>
       </div>
     </article>`;
 }
 
-function alterarQtd(produtoId, delta) {
-  const item = estado.carrinho.get(produtoId) || { qtd: 0, obs: '' };
-  item.qtd += delta;
-  if (item.qtd <= 0) estado.carrinho.delete(produtoId);
-  else estado.carrinho.set(produtoId, item);
+function renderProdutos() {
+  const termo = normalizar(estado.busca.trim());
+  const combina = (p) => !termo || normalizar(`${p.nome} ${p.descricao}`).includes(termo);
+  const grupos = estado.menu.categorias
+    .map((c) => ({ c, itens: estado.menu.produtos.filter((p) => p.categoria === c.id && combina(p)) }))
+    .filter((g) => g.itens.length);
 
-  const card = document.querySelector(`[data-produto="${produtoId}"]`);
-  if (card) card.outerHTML = htmlProduto(estado.menu.produtos.find((p) => p.id === produtoId));
-  renderBarra();
-  if (!$('#carrinho').hidden) renderCarrinho();
-}
-
-function totalCarrinho() {
-  let qtd = 0, total = 0;
-  for (const [id, item] of estado.carrinho) {
-    const p = estado.menu.produtos.find((x) => x.id === id);
-    qtd += item.qtd;
-    total += p.preco * item.qtd;
-  }
-  return { qtd, total };
+  $('#produtos').innerHTML = grupos.length
+    ? grupos.map(({ c, itens }) => `
+      <section class="grupo" id="cat-${c.id}">
+        <h3>${esc(c.nome)} ${rotuloCozinha(c.cozinha)}</h3>
+        ${itens.map(htmlProduto).join('')}
+      </section>`).join('')
+    : `<p class="sem-resultado">Nada encontrado para “${esc(estado.busca)}”.</p>`;
 }
 
 function renderBarra() {
-  const { qtd, total } = totalCarrinho();
-  $('#barra-carrinho').hidden = qtd === 0;
+  const { qtd, total } = totais();
+  $('#barra-carrinho').hidden = qtd === 0 || $('#cardapio').hidden;
   $('#qtd-carrinho').textContent = qtd;
   $('#total-carrinho').textContent = brl(total);
 }
 
-// ---------- Carrinho ----------
+// ---------- Folhas ----------
+function abrirFolha(id) {
+  $$('.folha').forEach((f) => (f.hidden = f.id !== id));
+  $('#fundo').hidden = false;
+}
+function fecharFolhas() {
+  $$('.folha').forEach((f) => (f.hidden = true));
+  $('#fundo').hidden = true;
+  estado.pizza = null;
+}
+
+// ---------- Personalizar pizza ----------
+function abrirPizza(produtoId) {
+  estado.pizza = { produtoId, tamanho: 'G', metadeId: null, meioAMeio: false, qtd: 1, obs: '' };
+  $('#meio-a-meio').checked = false;
+  $('#obs-pizza').value = '';
+  renderPizza();
+  abrirFolha('personalizar');
+}
+
+function renderPizza() {
+  const pz = estado.pizza;
+  const p = produto(pz.produtoId);
+  const metade = pz.metadeId && produto(pz.metadeId);
+  $('#titulo-pizza').textContent = metade ? `½ ${p.nome} + ½ ${metade.nome}` : p.nome;
+
+  $('#tamanhos').innerHTML = estado.menu.tamanhos.map((t) => {
+    const preco = Math.max(p.precos[t.id], metade ? metade.precos[t.id] : 0);
+    return `
+      <button data-tamanho="${t.id}" class="${pz.tamanho === t.id ? 'ativo' : ''}">
+        <b>${esc(t.nome)}</b><small>${t.fatias} fatias</small><span>${brl(preco)}</span>
+      </button>`;
+  }).join('');
+
+  const sabores = $('#sabores');
+  sabores.hidden = !pz.meioAMeio;
+  sabores.innerHTML = estado.menu.produtos
+    .filter((s) => s.categoria === p.categoria && s.id !== p.id)
+    .map((s) => `<button data-metade="${s.id}" class="${pz.metadeId === s.id ? 'ativo' : ''}">${esc(s.nome)}</button>`)
+    .join('');
+
+  $('#qtd-pizza').textContent = pz.qtd;
+  const preco = precoLinha(pz) * pz.qtd;
+  $('#adicionar-pizza').textContent = `Adicionar · ${brl(preco)}`;
+}
+
+function confirmarPizza() {
+  const pz = estado.pizza;
+  if (pz.meioAMeio && !pz.metadeId) return avisar('Escolha o segundo sabor.', 'erro');
+  adicionarLinha({
+    produtoId: pz.produtoId,
+    metadeId: pz.meioAMeio ? pz.metadeId : null,
+    tamanho: pz.tamanho,
+    qtd: pz.qtd,
+    obs: $('#obs-pizza').value.trim(),
+  });
+  fecharFolhas();
+  avisar(`${nomeLinha(pz)} adicionada.`, 'ok');
+}
+
+// ---------- Revisar pedido ----------
 function renderCarrinho() {
-  if (estado.carrinho.size === 0) return fecharCarrinho();
-  $('#mesa-resumo').textContent = $('#mesa').value.trim() || '?';
+  if (estado.linhas.length === 0) return fecharFolhas();
+  const id = $('#identificador').value.trim();
+  $('#titulo-carrinho').textContent = id ? rotuloIdentificacao(estado.tipo, id) : 'Revisar pedido';
 
-  // Agrupa visualmente por destino, igual ao que a cozinha vai receber.
+  // Agrupa como a cozinha vai receber.
   const grupos = new Map();
-  for (const [id, item] of estado.carrinho) {
-    const p = estado.menu.produtos.find((x) => x.id === id);
-    const cozinha = cozinhaDaCategoria(p.categoria) || 0;
-    if (!grupos.has(cozinha)) grupos.set(cozinha, []);
-    grupos.get(cozinha).push({ p, item });
+  for (const l of estado.linhas) {
+    const c = cozinhaDaLinha(l);
+    if (!grupos.has(c)) grupos.set(c, []);
+    grupos.get(c).push(l);
   }
-
   const ordem = [...grupos.keys()].sort((a, b) => (a || 99) - (b || 99));
-  $('#itens-carrinho').innerHTML = ordem.map((cozinha) => {
-    const titulo = cozinha
-      ? `${estado.menu.cozinhas[cozinha].nome} – ${estado.menu.cozinhas[cozinha].setor}`
-      : 'Balcão (não vai para a cozinha)';
-    return `<p class="destino-cozinha">→ ${esc(titulo)}</p>` + grupos.get(cozinha).map(({ p, item }) => `
-      <div class="item-carrinho" data-produto="${p.id}">
+
+  $('#itens-carrinho').innerHTML = ordem.map((c) => {
+    const titulo = c
+      ? `${estado.menu.cozinhas[c].nome} · ${estado.menu.cozinhas[c].setor}`
+      : 'Balcão · não vai para a cozinha';
+    return `<p class="destino-cozinha">→ ${esc(titulo)}</p>` + grupos.get(c).map((l) => `
+      <div class="item-carrinho" data-linha="${l.id}">
         <div class="linha">
-          <span class="nome">${esc(p.nome)}</span>
+          <span class="nome">${esc(nomeLinha(l))}
+            <small>${l.tamanho ? `${esc(tamanho(l.tamanho).nome)} · ` : ''}${brl(precoLinha(l))} cada</small>
+          </span>
           <div class="passo">
-            <button data-acao="menos" aria-label="Remover">−</button><b>${item.qtd}</b>
-            <button class="mais" data-acao="mais" aria-label="Adicionar">+</button>
+            <button data-linha-delta="-1" aria-label="Remover">−</button><b>${l.qtd}</b>
+            <button class="mais" data-linha-delta="1" aria-label="Adicionar">+</button>
           </div>
         </div>
-        ${cozinha ? `<input data-obs placeholder="Observação (ex.: sem cebola)" maxlength="140" value="${esc(item.obs)}">` : ''}
+        ${c ? `<input data-obs placeholder="Observação para a cozinha" maxlength="140" value="${esc(l.obs)}">` : ''}
       </div>`).join('');
   }).join('');
 
-  $('#total-folha').textContent = brl(totalCarrinho().total);
+  $('#total-folha').textContent = brl(totais().total);
 }
 
-function abrirCarrinho() {
-  $('#carrinho').hidden = false;
-  $('#fundo').hidden = false;
-  renderCarrinho();
+function rotuloIdentificacao(tipo, id) {
+  return tipo === 'mesa' ? `Mesa ${id}` : `${tipo === 'balcao' ? 'Balcão' : 'Delivery'} · ${id}`;
 }
-function fecharCarrinho() {
-  $('#carrinho').hidden = true;
-  $('#fundo').hidden = true;
+
+function validarIdentificacao() {
+  const input = $('#identificador');
+  const valor = input.value.trim();
+  const ok = estado.tipo === 'mesa' ? /^\d{1,3}$/.test(valor) : valor.length > 0;
+  if (!ok) {
+    fecharFolhas();
+    input.classList.add('erro');
+    input.focus();
+    avisar(estado.tipo === 'mesa' ? 'Informe o número da mesa.' : 'Informe o nome do cliente.', 'erro');
+  }
+  return ok ? valor : null;
 }
 
 async function enviarPedido() {
-  const mesaInput = $('#mesa');
-  const mesa = mesaInput.value.trim();
-  if (!mesa) {
-    fecharCarrinho();
-    mesaInput.classList.add('erro');
-    mesaInput.focus();
-    return avisar('Informe a mesa ou o nome do cliente.', 'erro');
-  }
+  const identificador = validarIdentificacao();
+  if (!identificador) return;
 
   const botao = $('#enviar');
   botao.disabled = true;
@@ -155,55 +283,95 @@ async function enviarPedido() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        mesa,
+        tipo: estado.tipo,
+        mesa: identificador,
         garcom: $('#garcom').value.trim(),
-        itens: [...estado.carrinho].map(([produtoId, i]) => ({ produtoId, qtd: i.qtd, obs: i.obs })),
+        itens: estado.linhas.map(({ produtoId, metadeId, tamanho, qtd, obs }) => ({ produtoId, metadeId, tamanho, qtd, obs })),
       }),
     });
-    const dados = await res.json();
-    if (!res.ok) throw new Error(dados.erro || 'Falha ao enviar.');
+    const pedido = await res.json();
+    if (!res.ok) throw new Error(pedido.erro || 'Falha ao enviar.');
 
-    const destinos = dados.tickets.map((t) => t.cozinhaNome.split(' - ')[0]).join(' e ');
-    avisar(`Pedido #${dados.numero} enviado${destinos ? ` para ${destinos}` : ''}!`, 'ok');
-    estado.carrinho.clear();
-    mesaInput.value = '';
-    fecharCarrinho();
-    renderCardapio();
-    renderBarra();
+    estado.linhas = [];
+    $('#identificador').value = '';
+    fecharFolhas();
+    atualizarTudo();
+    mostrarSucesso(pedido);
   } catch (err) {
-    avisar(err.message === 'Failed to fetch' ? 'Sem conexão com o servidor.' : err.message, 'erro');
+    avisar(err.message === 'Failed to fetch' ? 'Sem conexão com o servidor. Tente de novo.' : err.message, 'erro');
   } finally {
     botao.disabled = false;
     botao.textContent = 'Enviar para as cozinhas';
   }
 }
 
-// ---------- Acompanhamento ----------
+function mostrarSucesso(pedido) {
+  const contar = (itens) => itens.reduce((s, i) => s + i.qtd, 0);
+  const destinos = pedido.tickets.map((t) => ({ nome: t.cozinhaNome.replace(' - ', ' · '), qtd: contar(t.itens) }));
+  const balcao = pedido.itens.filter((i) => i.cozinhaId == null);
+  if (balcao.length) destinos.push({ nome: 'Balcão', qtd: contar(balcao) });
+
+  $('#sucesso-titulo').textContent = `Pedido #${pedido.numero} · ${pedido.rotulo}`;
+  $('#sucesso-destinos').innerHTML = destinos
+    .map((d) => `<li>${esc(d.nome)} <small>${d.qtd} ${d.qtd === 1 ? 'item' : 'itens'}</small></li>`)
+    .join('');
+  $('#aviso').hidden = true;
+  $('#sucesso').hidden = false;
+  if (navigator.vibrate) navigator.vibrate(60);
+}
+
+// ---------- Acompanhar ----------
 function renderPedidos() {
-  const meu = $('#garcom').value.trim().toLowerCase();
-  const lista = estado.pedidos.filter((p) => p.tickets.length && (!meu || !p.garcom || p.garcom.toLowerCase() === meu));
-  const prontos = lista.filter((p) => p.tickets.every((t) => t.status === 'pronto')).length;
-  $('#badge-prontos').hidden = prontos === 0;
-  $('#badge-prontos').textContent = prontos;
+  const meu = normalizar($('#garcom').value.trim());
+  const lista = estado.pedidos.filter((p) =>
+    p.tickets.length && (estado.filtro === 'todos' || !meu || normalizar(p.garcom || '') === meu));
+
+  $('#badge-prontos').hidden = estado.prontosNaoVistos === 0;
+  $('#badge-prontos').textContent = estado.prontosNaoVistos;
 
   $('#lista-pedidos').innerHTML = lista.length
-    ? lista.map((p) => `
-      <article class="pedido-card">
-        <header><h4>#${p.numero} · ${esc(rotuloMesa(p.mesa))}</h4><time>${hora(p.criadoEm)}</time></header>
-        ${p.tickets.map((t) => `
-          <div class="status-linha">
-            <span>${esc(t.cozinhaNome)} · ${t.itens.reduce((s, i) => s + i.qtd, 0)} itens</span>
-            <span class="status ${t.status}">${ROTULO_STATUS[t.status]}</span>
-          </div>`).join('')}
-      </article>`).join('')
-    : '<p class="vazio">Nenhum pedido enviado para as cozinhas ainda.</p>';
+    ? lista.map((p) => {
+      const qtd = p.itens.reduce((s, i) => s + i.qtd, 0);
+      const podeCancelar = !p.cancelado && p.tickets.some((t) => t.status !== 'pronto');
+      return `
+        <article class="pedido-card${p.cancelado ? ' cancelado' : ''}">
+          <header><h4>#${p.numero} · ${esc(p.rotulo)}</h4><time>${hora(p.criadoEm)}</time></header>
+          <div class="resumo">${qtd} ${qtd === 1 ? 'item' : 'itens'} · ${brl(p.total)}${p.garcom ? ` · ${esc(p.garcom)}` : ''}</div>
+          ${p.tickets.map((t) => `
+            <div class="status-linha">
+              <span>${esc(t.cozinhaNome.replace(' - ', ' · '))}</span>
+              <span>
+                ${t.impressao === 'falhou' ? '<span class="status impressao-falhou">Não impresso</span>' : ''}
+                <span class="status ${t.status}">${ROTULO_STATUS[t.status]}</span>
+              </span>
+            </div>`).join('')}
+          ${podeCancelar ? `<button class="cancelar" data-cancelar="${p.id}">Cancelar pedido</button>` : ''}
+        </article>`;
+    }).join('')
+    : `<p class="vazio">${estado.filtro === 'meus' && meu ? 'Você ainda não enviou pedidos.' : 'Nenhum pedido enviado para as cozinhas.'}</p>`;
+}
+
+async function cancelarPedido(id) {
+  const pedido = estado.pedidos.find((p) => p.id === id);
+  const dialogo = $('#confirmar');
+  $('#confirmar-titulo').textContent = `Cancelar pedido #${pedido.numero}?`;
+  $('#confirmar-texto').textContent = `${pedido.rotulo}. As cozinhas serão avisadas e um comprovante de cancelamento será impresso.`;
+  dialogo.returnValue = ''; // Esc não pode reaproveitar um "sim" anterior
+  dialogo.showModal();
+  const resposta = await new Promise((r) => dialogo.addEventListener('close', () => r(dialogo.returnValue), { once: true }));
+  if (resposta !== 'sim') return;
+
+  const res = await fetch(`/api/pedidos/${id}/cancelar`, { method: 'POST' });
+  const dados = await res.json();
+  if (!res.ok) return avisar(dados.erro || 'Não foi possível cancelar.', 'erro');
+  avisar(`Pedido #${pedido.numero} cancelado.`, 'ok');
 }
 
 function conectarTempoReal() {
   const fonte = new EventSource('/api/garcom/stream');
   fonte.addEventListener('pedido', (e) => {
     const pedido = JSON.parse(e.data);
-    estado.pedidos = [pedido, ...estado.pedidos.filter((p) => p.id !== pedido.id)];
+    estado.pedidos = [pedido, ...estado.pedidos.filter((p) => p.id !== pedido.id)].sort((a, b) => b.id - a.id);
     renderPedidos();
   });
   fonte.addEventListener('ticket', (e) => {
@@ -213,15 +381,18 @@ function conectarTempoReal() {
     const anterior = pedido.tickets.find((t) => t.id === ticket.id);
     pedido.tickets = pedido.tickets.map((t) => (t.id === ticket.id ? ticket : t));
     if (anterior && anterior.status !== 'pronto' && ticket.status === 'pronto') {
-      avisar(`${rotuloMesa(ticket.mesa)}: ${ticket.cozinhaNome.split(' - ')[1]} pronto!`, 'ok');
+      avisar(`${ticket.rotulo}: ${ticket.cozinhaNome.split(' - ')[1]} pronto!`, 'ok');
       if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+      if ($('#pedidos').hidden) estado.prontosNaoVistos++;
     }
     renderPedidos();
   });
   fonte.onopen = async () => {
+    $('#conexao').classList.add('on');
     estado.pedidos = await (await fetch('/api/pedidos')).json();
     renderPedidos();
   };
+  fonte.onerror = () => $('#conexao').classList.remove('on');
 }
 
 // ---------- Geral ----------
@@ -232,53 +403,107 @@ function avisar(texto, tipo = '') {
   el.className = `aviso ${tipo}`;
   el.hidden = false;
   clearTimeout(timerAviso);
-  timerAviso = setTimeout(() => (el.hidden = true), 3500);
+  timerAviso = setTimeout(() => (el.hidden = true), 3200);
 }
 
 function trocarAba(aba) {
-  document.querySelectorAll('.aba').forEach((b) => b.classList.toggle('ativa', b.dataset.aba === aba));
+  $$('.aba').forEach((b) => b.classList.toggle('ativa', b.dataset.aba === aba));
   $('#cardapio').hidden = aba !== 'cardapio';
   $('#pedidos').hidden = aba !== 'pedidos';
-  $('#barra-carrinho').hidden = aba !== 'cardapio' || estado.carrinho.size === 0;
-  if (aba === 'pedidos') renderPedidos();
+  if (aba === 'pedidos') estado.prontosNaoVistos = 0;
+  renderBarra();
+  renderPedidos();
+  window.scrollTo({ top: 0 });
+}
+
+function trocarTipo(tipo) {
+  estado.tipo = tipo;
+  $$('[data-tipo]').forEach((b) => {
+    b.classList.toggle('ativo', b.dataset.tipo === tipo);
+    b.setAttribute('aria-checked', String(b.dataset.tipo === tipo));
+  });
+  const cfg = TIPOS[tipo];
+  const input = $('#identificador');
+  $('#rotulo-identificador').textContent = cfg.rotulo;
+  input.placeholder = cfg.placeholder;
+  input.inputMode = cfg.modo;
+  input.maxLength = cfg.max;
+  input.value = '';
+  input.classList.remove('erro');
 }
 
 function ligarEventos() {
   document.addEventListener('click', (e) => {
-    const botao = e.target.closest('[data-acao]');
-    if (botao) {
-      const id = botao.closest('[data-produto]').dataset.produto;
-      alterarQtd(id, botao.dataset.acao === 'mais' ? 1 : -1);
+    const alvo = e.target;
+    let el;
+    if ((el = alvo.closest('[data-simples-delta]'))) {
+      return alterarSimples(el.closest('[data-simples]').dataset.simples, Number(el.dataset.simplesDelta));
+    }
+    if ((el = alvo.closest('[data-pizza]'))) return abrirPizza(el.dataset.pizza);
+    if ((el = alvo.closest('[data-linha-delta]'))) {
+      return alterarLinha(Number(el.closest('[data-linha]').dataset.linha), Number(el.dataset.linhaDelta));
+    }
+    if ((el = alvo.closest('[data-tamanho]'))) {
+      estado.pizza.tamanho = el.dataset.tamanho;
+      return renderPizza();
+    }
+    if ((el = alvo.closest('[data-metade]'))) {
+      estado.pizza.metadeId = el.dataset.metade;
+      return renderPizza();
+    }
+    if ((el = alvo.closest('[data-qtd-pizza]'))) {
+      estado.pizza.qtd = Math.min(50, Math.max(1, estado.pizza.qtd + Number(el.dataset.qtdPizza)));
+      return renderPizza();
+    }
+    if ((el = alvo.closest('[data-tipo]'))) return trocarTipo(el.dataset.tipo);
+    if ((el = alvo.closest('[data-filtro]'))) {
+      estado.filtro = el.dataset.filtro;
+      $$('[data-filtro]').forEach((b) => b.classList.toggle('ativo', b === el));
+      return renderPedidos();
+    }
+    if ((el = alvo.closest('[data-cancelar]'))) return cancelarPedido(Number(el.dataset.cancelar));
+    if ((el = alvo.closest('.chip'))) {
+      $$('.chip').forEach((c) => c.classList.toggle('ativa', c === el));
+      const secao = document.getElementById(`cat-${el.dataset.cat}`);
+      if (secao) window.scrollTo({ top: secao.offsetTop - 200, behavior: 'smooth' });
       return;
     }
-    const chip = e.target.closest('.chip');
-    if (chip) {
-      document.querySelectorAll('.chip').forEach((c) => c.classList.toggle('ativa', c === chip));
-      const alvo = document.getElementById(`cat-${chip.dataset.cat}`);
-      window.scrollTo({ top: alvo.offsetTop - 150, behavior: 'smooth' });
-      return;
-    }
-    const aba = e.target.closest('.aba');
-    if (aba) trocarAba(aba.dataset.aba);
+    if ((el = alvo.closest('.aba'))) return trocarAba(el.dataset.aba);
+    if (alvo.closest('[data-fechar]') || alvo.id === 'fundo') return fecharFolhas();
   });
 
   document.addEventListener('input', (e) => {
     if (e.target.matches('[data-obs]')) {
-      const id = e.target.closest('[data-produto]').dataset.produto;
-      estado.carrinho.get(id).obs = e.target.value;
+      const linha = estado.linhas.find((l) => l.id === Number(e.target.closest('[data-linha]').dataset.linha));
+      linha.obs = e.target.value;
     }
   });
 
-  $('#mesa').addEventListener('input', (e) => e.target.classList.remove('erro'));
+  $('#meio-a-meio').addEventListener('change', (e) => {
+    estado.pizza.meioAMeio = e.target.checked;
+    if (!e.target.checked) estado.pizza.metadeId = null;
+    renderPizza();
+  });
+  $('#busca').addEventListener('input', (e) => {
+    estado.busca = e.target.value;
+    renderProdutos();
+  });
+  $('#identificador').addEventListener('input', (e) => e.target.classList.remove('erro'));
   $('#garcom').value = lerGuardado('garcom');
   $('#garcom').addEventListener('change', (e) => {
     guardar('garcom', e.target.value.trim());
     renderPedidos();
   });
-  $('#barra-carrinho').addEventListener('click', abrirCarrinho);
-  $('#fechar-carrinho').addEventListener('click', fecharCarrinho);
-  $('#fundo').addEventListener('click', fecharCarrinho);
+  $('#barra-carrinho').addEventListener('click', () => {
+    renderCarrinho();
+    abrirFolha('carrinho');
+  });
   $('#enviar').addEventListener('click', enviarPedido);
+  $('#adicionar-pizza').addEventListener('click', confirmarPizza);
+  $('#novo-pedido').addEventListener('click', () => {
+    $('#sucesso').hidden = true;
+    window.scrollTo({ top: 0 });
+  });
 }
 
 async function iniciar() {
@@ -286,9 +511,13 @@ async function iniciar() {
   try {
     estado.menu = await (await fetch('/api/menu')).json();
   } catch {
-    return avisar('Não foi possível carregar o cardápio.', 'erro');
+    return avisar('Não foi possível carregar o cardápio. Verifique a conexão.', 'erro');
   }
-  renderCardapio();
+  $('#nome-loja').textContent = estado.menu.loja.nome;
+  document.title = `${estado.menu.loja.nome} · Garçom`;
+  renderCategorias();
+  renderProdutos();
+  renderBarra();
   conectarTempoReal();
 }
 

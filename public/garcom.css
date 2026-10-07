@@ -1,136 +1,229 @@
 :root {
   --vermelho: #b3261e;
   --vermelho-escuro: #8c1d17;
-  --creme: #fbf6ef;
+  --vermelho-claro: #fbe9e7;
+  --creme: #f7f2ea;
   --papel: #ffffff;
   --tinta: #2b2118;
   --suave: #7a6a5c;
-  --linha: #eadfd2;
+  --linha: #e9dfd2;
   --verde: #2e7d32;
-  --amarelo: #c77700;
+  --amarelo: #b26a00;
   --azul: #1f5fa8;
   --raio: 14px;
+  --sombra: 0 1px 2px rgba(43, 33, 24, .06), 0 2px 8px rgba(43, 33, 24, .05);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--tinta);
   background: var(--creme);
+  -webkit-tap-highlight-color: transparent;
 }
 * { box-sizing: border-box; }
-body { margin: 0; padding-bottom: 96px; background: var(--creme); overflow-x: hidden; }
-button { font: inherit; cursor: pointer; }
+body { margin: 0; padding-bottom: 104px; background: var(--creme); overflow-x: hidden; }
+button { font: inherit; cursor: pointer; color: inherit; }
+input { font: inherit; }
 [hidden] { display: none !important; }
 
+/* ----- Topo ----- */
 .topo {
   position: sticky; top: 0; z-index: 5;
   background: var(--vermelho); color: #fff;
   padding: calc(env(safe-area-inset-top) + 12px) 16px 0;
 }
-.marca { font-weight: 800; font-size: 20px; letter-spacing: .3px; }
-.marca span { font-weight: 400; opacity: .8; }
-.abas { display: flex; gap: 4px; margin-top: 10px; }
+.topo-linha { display: flex; justify-content: space-between; align-items: center; }
+.marca { font-weight: 800; font-size: 20px; letter-spacing: .2px; }
+.marca small { font-weight: 500; opacity: .75; font-size: 14px; margin-left: 4px; }
+.conexao { width: 10px; height: 10px; border-radius: 50%; background: #ffb4ad; box-shadow: 0 0 0 3px rgba(255,255,255,.18); }
+.conexao.on { background: #7cfc8a; }
+.abas { display: flex; margin-top: 8px; }
 .aba {
-  flex: 1; background: none; border: 0; color: #fff; opacity: .7;
+  flex: 1; background: none; border: 0; color: #fff; opacity: .72;
   padding: 10px 0 12px; border-bottom: 3px solid transparent; font-weight: 600;
 }
 .aba.ativa { opacity: 1; border-color: #fff; }
-.badge { background: #fff; color: var(--vermelho); border-radius: 99px; padding: 1px 7px; font-size: 12px; margin-left: 4px; }
+.badge { background: #fff; color: var(--vermelho); border-radius: 99px; padding: 1px 7px; font-size: 12px; margin-left: 4px; font-weight: 800; }
 
-.identificacao { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; padding: 14px 16px 4px; }
-.identificacao label { font-size: 12px; color: var(--suave); font-weight: 600; display: grid; gap: 4px; }
-.identificacao input {
-  font-size: 18px; padding: 10px 12px; border: 1.5px solid var(--linha);
-  border-radius: 10px; background: var(--papel); color: var(--tinta); width: 100%; min-width: 0;
+/* ----- Controles ----- */
+.segmentado { display: flex; background: #ece4d8; border-radius: 12px; padding: 4px; gap: 4px; }
+.segmentado button {
+  flex: 1; border: 0; background: transparent; padding: 9px 0; border-radius: 9px;
+  font-weight: 700; color: var(--suave);
 }
-.identificacao input:focus { outline: none; border-color: var(--vermelho); }
-.identificacao input.erro { border-color: var(--vermelho); background: #fff1f0; }
+.segmentado button.ativo { background: var(--papel); color: var(--tinta); box-shadow: var(--sombra); }
+.segmentado.pequeno button { padding: 7px 0; font-size: 14px; }
 
-.categorias {
-  position: sticky; top: 92px; z-index: 4; background: var(--creme);
-  display: flex; gap: 8px; overflow-x: auto; padding: 10px 16px; scrollbar-width: none;
+.campo, .campos input {
+  width: 100%; min-width: 0; font-size: 17px; padding: 11px 12px;
+  border: 1.5px solid var(--linha); border-radius: 10px; background: var(--papel); color: var(--tinta);
 }
+.campo:focus, .campos input:focus, #busca:focus { outline: none; border-color: var(--vermelho); }
+.campos input.erro { border-color: var(--vermelho); background: var(--vermelho-claro); }
+
+.identificacao { padding: 14px 16px 6px; display: grid; gap: 10px; }
+.campos { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.campos label { font-size: 12px; color: var(--suave); font-weight: 700; display: grid; gap: 4px; text-transform: uppercase; letter-spacing: .4px; }
+
+.busca-categorias { position: sticky; top: 98px; z-index: 4; background: var(--creme); padding: 8px 0 2px; }
+#busca {
+  display: block; width: calc(100% - 32px); margin: 0 16px; font-size: 16px; padding: 10px 12px;
+  border: 1.5px solid var(--linha); border-radius: 10px; background: var(--papel);
+}
+.categorias { display: flex; gap: 8px; overflow-x: auto; padding: 10px 16px 8px; scrollbar-width: none; }
 .categorias::-webkit-scrollbar { display: none; }
 .chip {
   white-space: nowrap; border: 1.5px solid var(--linha); background: var(--papel);
-  border-radius: 99px; padding: 8px 14px; font-weight: 600; color: var(--tinta);
+  border-radius: 99px; padding: 7px 14px; font-weight: 600; font-size: 14px;
 }
 .chip.ativa { background: var(--tinta); color: #fff; border-color: var(--tinta); }
 
+/* ----- Cardápio ----- */
 .grupo h3 {
-  margin: 18px 16px 8px; font-size: 14px; text-transform: uppercase; letter-spacing: .6px;
+  margin: 16px 16px 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .6px;
   color: var(--suave); display: flex; align-items: center; gap: 8px;
 }
-.tag-cozinha { font-size: 11px; letter-spacing: 0; text-transform: none; padding: 2px 8px; border-radius: 99px; color: #fff; }
+.tag-cozinha { font-size: 11px; letter-spacing: 0; text-transform: none; padding: 2px 8px; border-radius: 99px; color: #fff; font-weight: 700; }
 .tag-cozinha.c1 { background: var(--vermelho); }
 .tag-cozinha.c2 { background: var(--azul); }
 .tag-cozinha.c0 { background: var(--suave); }
+.sem-resultado { text-align: center; color: var(--suave); padding: 40px 16px; }
 
 .produto {
   display: flex; align-items: center; gap: 12px; margin: 0 16px 8px;
   background: var(--papel); border-radius: var(--raio); padding: 12px 12px 12px 14px;
-  border: 1.5px solid transparent;
+  border: 1.5px solid transparent; box-shadow: var(--sombra);
 }
 .produto.no-carrinho { border-color: var(--vermelho); }
 .produto .info { flex: 1; min-width: 0; }
 .produto .nome { font-weight: 700; }
 .produto .desc { color: var(--suave); font-size: 13px; margin-top: 2px; }
 .produto .preco { font-weight: 700; margin-top: 4px; font-size: 14px; }
+.produto .preco small { font-weight: 500; color: var(--suave); }
+.produto .no-pedido { font-size: 12px; font-weight: 700; color: var(--vermelho); margin-top: 3px; }
 
 .passo { display: flex; align-items: center; gap: 6px; }
 .passo button {
   width: 40px; height: 40px; border-radius: 12px; border: 0; font-size: 22px; font-weight: 700;
-  background: var(--creme); color: var(--tinta);
+  background: var(--creme); line-height: 1;
 }
 .passo button.mais { background: var(--vermelho); color: #fff; }
-.passo b { min-width: 20px; text-align: center; font-size: 17px; }
+.passo b { min-width: 22px; text-align: center; font-size: 17px; }
+.passo.grande button { width: 46px; height: 46px; }
 
+/* ----- Barra do carrinho ----- */
 .barra-carrinho {
   position: fixed; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 12px); z-index: 6;
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
   background: var(--vermelho); color: #fff; border: 0; border-radius: 16px;
-  padding: 16px 18px; font-weight: 600; box-shadow: 0 8px 24px rgba(140, 29, 23, .35);
+  padding: 14px 16px; font-weight: 700; box-shadow: 0 8px 24px rgba(140, 29, 23, .35);
 }
+.barra-carrinho .qtd b { display: inline-grid; place-items: center; min-width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,.2); }
 
-.fundo { position: fixed; inset: 0; background: rgba(43, 33, 24, .45); z-index: 7; }
+/* ----- Folhas (bottom sheets) ----- */
+.fundo { position: fixed; inset: 0; background: rgba(43, 33, 24, .45); z-index: 7; animation: aparecer .2s; }
 .folha {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; max-height: 88vh;
-  display: flex; flex-direction: column;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; max-height: 90vh;
+  display: flex; flex-direction: column; max-width: 640px; margin: 0 auto;
   background: var(--papel); border-radius: 20px 20px 0 0;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom); animation: subir .22s ease-out;
 }
-.folha-topo { display: flex; justify-content: space-between; align-items: center; padding: 16px 16px 8px; }
-.folha-topo h2 { margin: 0; font-size: 18px; }
-.fechar { border: 0; background: var(--creme); width: 36px; height: 36px; border-radius: 50%; font-size: 22px; }
-#itens-carrinho { overflow-y: auto; padding: 0 16px; }
-.item-carrinho { border-bottom: 1px solid var(--linha); padding: 12px 0; }
-.item-carrinho .linha { display: flex; align-items: center; gap: 10px; }
-.item-carrinho .nome { flex: 1; font-weight: 600; }
-.item-carrinho input {
-  margin-top: 8px; width: 100%; padding: 9px 11px; font-size: 15px;
-  border: 1.5px solid var(--linha); border-radius: 10px; background: var(--creme);
-}
-.destino-cozinha { font-size: 13px; color: var(--suave); margin: 14px 0 0; font-weight: 600; }
+@keyframes subir { from { transform: translateY(40px); opacity: .4; } }
+@keyframes aparecer { from { opacity: 0; } }
+.alca { width: 40px; height: 4px; border-radius: 2px; background: var(--linha); margin: 8px auto 0; }
+.folha-topo { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px 8px; }
+.folha-topo h2 { margin: 0; font-size: 19px; }
+.fechar { border: 0; background: var(--creme); width: 36px; height: 36px; border-radius: 50%; font-size: 22px; line-height: 1; }
+.folha-corpo { overflow-y: auto; padding: 0 16px 8px; }
 .folha-rodape { padding: 12px 16px 16px; border-top: 1px solid var(--linha); }
+.folha-rodape.linha { display: flex; gap: 12px; align-items: center; }
+.folha-rodape.linha .botao-principal { flex: 1; }
 .total { display: flex; justify-content: space-between; font-size: 18px; margin-bottom: 12px; }
+.secao { font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--suave); margin: 14px 0 8px; }
+
 .botao-principal {
-  width: 100%; border: 0; border-radius: 14px; padding: 16px; font-size: 17px; font-weight: 700;
+  width: 100%; border: 0; border-radius: 14px; padding: 15px; font-size: 17px; font-weight: 700;
   background: var(--vermelho); color: #fff;
 }
 .botao-principal:disabled { opacity: .6; }
 
-.pedido-card { background: var(--papel); border-radius: var(--raio); margin: 12px 16px; padding: 14px; }
-.pedido-card header { display: flex; justify-content: space-between; align-items: baseline; }
+/* Carrinho */
+.destino-cozinha { font-size: 12px; color: var(--suave); margin: 14px 0 0; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+.item-carrinho { border-bottom: 1px solid var(--linha); padding: 12px 0; }
+.item-carrinho .linha { display: flex; align-items: center; gap: 10px; }
+.item-carrinho .nome { flex: 1; font-weight: 600; min-width: 0; }
+.item-carrinho .nome small { display: block; color: var(--suave); font-weight: 500; font-size: 13px; }
+.item-carrinho input {
+  display: block; width: 100%; margin-top: 8px; font-size: 15px; padding: 9px 11px;
+  border: 1.5px solid var(--linha); border-radius: 10px; background: var(--creme); color: var(--tinta);
+}
+.item-carrinho input:focus { outline: none; border-color: var(--vermelho); background: var(--papel); }
+
+/* Personalizar pizza */
+.opcoes-tamanho { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.opcoes-tamanho button {
+  border: 1.5px solid var(--linha); background: var(--papel); border-radius: 12px; padding: 10px 6px;
+  display: grid; gap: 2px; text-align: center;
+}
+.opcoes-tamanho button small { color: var(--suave); font-size: 12px; }
+.opcoes-tamanho button.ativo { border-color: var(--vermelho); background: var(--vermelho-claro); }
+.interruptor {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: var(--creme);
+}
+.interruptor small { display: block; color: var(--suave); font-size: 13px; }
+.interruptor input { width: 22px; height: 22px; accent-color: var(--vermelho); }
+.sabores { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.sabores button {
+  border: 1.5px solid var(--linha); background: var(--papel); border-radius: 99px; padding: 8px 12px; font-size: 14px; font-weight: 600;
+}
+.sabores button.ativo { background: var(--tinta); color: #fff; border-color: var(--tinta); }
+
+/* ----- Acompanhar ----- */
+.filtro { padding: 14px 16px 0; }
+.pedido-card { background: var(--papel); border-radius: var(--raio); margin: 12px 16px; padding: 14px; box-shadow: var(--sombra); }
+.pedido-card.cancelado { opacity: .6; }
+.pedido-card header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .pedido-card h4 { margin: 0; font-size: 17px; }
-.pedido-card time { color: var(--suave); font-size: 13px; }
+.pedido-card time { color: var(--suave); font-size: 13px; white-space: nowrap; }
+.pedido-card .resumo { color: var(--suave); font-size: 13px; margin-top: 4px; }
 .status-linha { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 8px; font-size: 14px; }
-.status { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 99px; color: #fff; }
+.status { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 99px; color: #fff; white-space: nowrap; }
 .status.novo { background: var(--amarelo); }
 .status.preparo { background: var(--azul); }
 .status.pronto { background: var(--verde); }
+.status.cancelado { background: var(--suave); }
+.status.impressao-falhou { background: var(--vermelho); }
+.cancelar { margin-top: 12px; border: 0; background: none; color: var(--vermelho); font-weight: 700; font-size: 14px; padding: 4px 0; }
 .vazio { text-align: center; color: var(--suave); padding: 48px 24px; }
 
+/* ----- Sucesso ----- */
+.sucesso { position: fixed; inset: 0; z-index: 12; display: grid; place-items: center; padding: 24px; background: rgba(43, 33, 24, .55); animation: aparecer .2s; }
+.sucesso-caixa { background: var(--papel); border-radius: 22px; padding: 28px 22px 20px; width: 100%; max-width: 380px; text-align: center; animation: subir .25s ease-out; }
+.sucesso-icone { width: 64px; height: 64px; margin: 0 auto 10px; border-radius: 50%; display: grid; place-items: center; font-size: 34px; color: #fff; background: var(--verde); }
+.sucesso h2 { margin: 0 0 12px; }
+.sucesso ul { list-style: none; padding: 0; margin: 0 0 18px; text-align: left; }
+.sucesso li { display: flex; justify-content: space-between; padding: 10px 12px; border-radius: 10px; background: var(--creme); margin-bottom: 6px; font-weight: 600; }
+.sucesso li small { color: var(--suave); font-weight: 500; }
+
+/* ----- Diálogo ----- */
+.dialogo { border: 0; border-radius: 18px; padding: 20px; width: min(360px, calc(100% - 32px)); }
+.dialogo::backdrop { background: rgba(43, 33, 24, .5); }
+.dialogo h3 { margin: 0 0 6px; }
+.dialogo p { margin: 0 0 18px; color: var(--suave); }
+.dialogo-acoes { display: flex; gap: 10px; }
+.dialogo-acoes button { flex: 1; border: 0; border-radius: 12px; padding: 12px; font-weight: 700; }
+.botao-sec { background: var(--creme); }
+.botao-perigo { background: var(--vermelho); color: #fff; }
+
+/* ----- Aviso ----- */
 .aviso {
-  position: fixed; left: 16px; right: 16px; top: calc(env(safe-area-inset-top) + 16px); z-index: 10;
+  position: fixed; left: 16px; right: 16px; top: calc(env(safe-area-inset-top) + 16px); z-index: 20;
   background: var(--tinta); color: #fff; padding: 14px 16px; border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.25); font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25); font-weight: 600; animation: subir .2s;
+  max-width: 480px; margin: 0 auto;
 }
 .aviso.ok { background: var(--verde); }
 .aviso.erro { background: var(--vermelho-escuro); }
+
+@media (min-width: 700px) {
+  .tela, .busca-categorias { max-width: 680px; margin: 0 auto; }
+  .barra-carrinho { max-width: 640px; margin: 0 auto; }
+}

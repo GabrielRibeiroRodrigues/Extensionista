@@ -5,53 +5,132 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#b3261e">
   <link rel="manifest" href="/manifest.webmanifest">
-  <title>Pizzaria – Pedidos</title>
+  <link rel="icon" href="/icone.svg">
+  <link rel="apple-touch-icon" href="/icone.svg">
+  <title>Pedidos · Garçom</title>
   <link rel="stylesheet" href="/garcom.css">
 </head>
 <body>
   <header class="topo">
-    <div class="marca">Pizzaria <span>Pedidos</span></div>
+    <div class="topo-linha">
+      <div class="marca"><span id="nome-loja">Pizzaria</span> <small>Garçom</small></div>
+      <span id="conexao" class="conexao" title="Conexão com o servidor"></span>
+    </div>
     <nav class="abas" role="tablist">
-      <button class="aba ativa" data-aba="cardapio" role="tab">Cardápio</button>
-      <button class="aba" data-aba="pedidos" role="tab">Pedidos <span id="badge-prontos" class="badge" hidden></span></button>
+      <button class="aba ativa" data-aba="cardapio" role="tab">Novo pedido</button>
+      <button class="aba" data-aba="pedidos" role="tab">Acompanhar <span id="badge-prontos" class="badge" hidden></span></button>
     </nav>
   </header>
 
   <main id="cardapio" class="tela">
     <section class="identificacao">
-      <label>Mesa / Cliente
-        <input id="mesa" inputmode="text" placeholder="Ex.: 12" autocomplete="off" maxlength="20">
-      </label>
-      <label>Garçom
-        <input id="garcom" placeholder="Seu nome" autocomplete="off" maxlength="40">
-      </label>
+      <div class="segmentado" role="radiogroup" aria-label="Tipo de pedido">
+        <button data-tipo="mesa" class="ativo" role="radio" aria-checked="true">Mesa</button>
+        <button data-tipo="balcao" role="radio" aria-checked="false">Balcão</button>
+        <button data-tipo="delivery" role="radio" aria-checked="false">Delivery</button>
+      </div>
+      <div class="campos">
+        <label><span id="rotulo-identificador">Nº da mesa</span>
+          <input id="identificador" inputmode="numeric" placeholder="Ex.: 12" autocomplete="off" maxlength="3">
+        </label>
+        <label>Garçom
+          <input id="garcom" placeholder="Seu nome" autocomplete="off" maxlength="40">
+        </label>
+      </div>
     </section>
-    <nav id="categorias" class="categorias"></nav>
+
+    <div class="busca-categorias">
+      <input id="busca" type="search" placeholder="Buscar no cardápio…" autocomplete="off">
+      <nav id="categorias" class="categorias"></nav>
+    </div>
     <div id="produtos"></div>
   </main>
 
   <main id="pedidos" class="tela" hidden>
+    <div class="filtro">
+      <div class="segmentado pequeno" role="radiogroup" aria-label="Filtro">
+        <button data-filtro="meus" class="ativo">Meus pedidos</button>
+        <button data-filtro="todos">Todos</button>
+      </div>
+    </div>
     <div id="lista-pedidos"></div>
   </main>
 
   <button id="barra-carrinho" class="barra-carrinho" hidden>
-    <span><b id="qtd-carrinho">0</b> itens</span>
+    <span class="qtd"><b id="qtd-carrinho">0</b></span>
     <span>Revisar pedido</span>
     <span id="total-carrinho">R$ 0,00</span>
   </button>
 
   <div id="fundo" class="fundo" hidden></div>
+
+  <!-- Revisar pedido -->
   <section id="carrinho" class="folha" hidden aria-label="Revisar pedido">
+    <div class="alca"></div>
     <div class="folha-topo">
-      <h2>Pedido – mesa <span id="mesa-resumo"></span></h2>
-      <button id="fechar-carrinho" class="fechar" aria-label="Fechar">×</button>
+      <h2 id="titulo-carrinho">Revisar pedido</h2>
+      <button class="fechar" data-fechar aria-label="Fechar">×</button>
     </div>
-    <div id="itens-carrinho"></div>
+    <div id="itens-carrinho" class="folha-corpo"></div>
     <div class="folha-rodape">
       <div class="total"><span>Total</span><b id="total-folha">R$ 0,00</b></div>
       <button id="enviar" class="botao-principal">Enviar para as cozinhas</button>
     </div>
   </section>
+
+  <!-- Personalizar pizza -->
+  <section id="personalizar" class="folha" hidden aria-label="Personalizar pizza">
+    <div class="alca"></div>
+    <div class="folha-topo">
+      <h2 id="titulo-pizza">Pizza</h2>
+      <button class="fechar" data-fechar aria-label="Fechar">×</button>
+    </div>
+    <div class="folha-corpo">
+      <h3 class="secao">Tamanho</h3>
+      <div id="tamanhos" class="opcoes-tamanho"></div>
+
+      <label class="interruptor">
+        <span>
+          <b>Meio a meio</b>
+          <small>Cobra o sabor mais caro</small>
+        </span>
+        <input id="meio-a-meio" type="checkbox">
+      </label>
+      <div id="sabores" class="sabores" hidden></div>
+
+      <h3 class="secao">Observação</h3>
+      <input id="obs-pizza" class="campo" placeholder="Ex.: sem cebola, borda recheada" maxlength="140">
+    </div>
+    <div class="folha-rodape linha">
+      <div class="passo grande">
+        <button data-qtd-pizza="-1" aria-label="Diminuir">−</button>
+        <b id="qtd-pizza">1</b>
+        <button data-qtd-pizza="1" class="mais" aria-label="Aumentar">+</button>
+      </div>
+      <button id="adicionar-pizza" class="botao-principal">Adicionar</button>
+    </div>
+  </section>
+
+  <!-- Pedido enviado -->
+  <div id="sucesso" class="sucesso" hidden>
+    <div class="sucesso-caixa">
+      <div class="sucesso-icone">✓</div>
+      <h2 id="sucesso-titulo">Pedido enviado</h2>
+      <ul id="sucesso-destinos"></ul>
+      <button id="novo-pedido" class="botao-principal">Novo pedido</button>
+    </div>
+  </div>
+
+  <dialog id="confirmar" class="dialogo">
+    <form method="dialog">
+      <h3 id="confirmar-titulo"></h3>
+      <p id="confirmar-texto"></p>
+      <div class="dialogo-acoes">
+        <button value="nao" class="botao-sec">Voltar</button>
+        <button value="sim" class="botao-perigo">Cancelar pedido</button>
+      </div>
+    </form>
+  </dialog>
 
   <div id="aviso" class="aviso" role="status" hidden></div>
 
