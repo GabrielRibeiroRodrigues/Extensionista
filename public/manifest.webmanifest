@@ -1,0 +1,9 @@
+{
+  "name": "Pizzaria – Pedidos",
+  "short_name": "Pedidos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbf6ef",
+  "theme_color": "#b3261e",
+  "icons": [{ "src": "/icone.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

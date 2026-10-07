@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#b3261e">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <title>Pizzaria – Pedidos</title>
+  <link rel="stylesheet" href="/garcom.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="marca">Pizzaria <span>Pedidos</span></div>
+    <nav class="abas" role="tablist">
+      <button class="aba ativa" data-aba="cardapio" role="tab">Cardápio</button>
+      <button class="aba" data-aba="pedidos" role="tab">Pedidos <span id="badge-prontos" class="badge" hidden></span></button>
+    </nav>
+  </header>
+
+  <main id="cardapio" class="tela">
+    <section class="identificacao">
+      <label>Mesa / Cliente
+        <input id="mesa" inputmode="text" placeholder="Ex.: 12" autocomplete="off" maxlength="20">
+      </label>
+      <label>Garçom
+        <input id="garcom" placeholder="Seu nome" autocomplete="off" maxlength="40">
+      </label>
+    </section>
+    <nav id="categorias" class="categorias"></nav>
+    <div id="produtos"></div>
+  </main>
+
+  <main id="pedidos" class="tela" hidden>
+    <div id="lista-pedidos"></div>
+  </main>
+
+  <button id="barra-carrinho" class="barra-carrinho" hidden>
+    <span><b id="qtd-carrinho">0</b> itens</span>
+    <span>Revisar pedido</span>
+    <span id="total-carrinho">R$ 0,00</span>
+  </button>
+
+  <div id="fundo" class="fundo" hidden></div>
+  <section id="carrinho" class="folha" hidden aria-label="Revisar pedido">
+    <div class="folha-topo">
+      <h2>Pedido – mesa <span id="mesa-resumo"></span></h2>
+      <button id="fechar-carrinho" class="fechar" aria-label="Fechar">×</button>
+    </div>
+    <div id="itens-carrinho"></div>
+    <div class="folha-rodape">
+      <div class="total"><span>Total</span><b id="total-folha">R$ 0,00</b></div>
+      <button id="enviar" class="botao-principal">Enviar para as cozinhas</button>
+    </div>
+  </section>
+
+  <div id="aviso" class="aviso" role="status" hidden></div>
+
+  <script src="/garcom.js"></script>
+</body>
+</html>
