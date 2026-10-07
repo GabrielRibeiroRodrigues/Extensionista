@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Impressoras · Simulação</title>
+  <link rel="icon" href="/icone.svg">
+  <link rel="stylesheet" href="/impressoras.css">
+</head>
+<body>
+  <header class="topo">
+    <div>
+      <a class="voltar" href="/painel.html">← Painel</a>
+      <h1>Impressoras das cozinhas</h1>
+      <p>Cada pedido aparece aqui exatamente como sai na impressora térmica da cozinha.</p>
+    </div>
+    <div class="topo-acoes">
+      <span id="conexao" class="conexao off">desconectado</span>
+      <button id="som" class="botao" aria-pressed="false">🔇 Som desligado</button>
+    </div>
+  </header>
+
+  <main id="impressoras" class="impressoras"></main>
+
+  <template id="tpl-impressora">
+    <section class="impressora">
+      <div class="corpo">
+        <div class="corpo-topo">
+          <div>
+            <div class="modelo">TÉRMICA 80mm</div>
+            <h2 class="nome"></h2>
+          </div>
+          <div class="led-area">
+            <span class="led"></span>
+            <span class="led-texto"></span>
+          </div>
+        </div>
+        <div class="corpo-meio">
+          <div class="destino"></div>
+          <div class="contador"><b>0</b> impressos</div>
+        </div>
+        <div class="corpo-acoes">
+          <button class="botao teste">Imprimir teste</button>
+        </div>
+        <div class="saida"></div>
+      </div>
+      <div class="erro-impressora" hidden></div>
+      <div class="bandeja">
+        <div class="papel vazio"><div class="conteudo"><div class="aguardando">Aguardando pedidos…</div></div></div>
+      </div>
+      <h3 class="titulo-historico">Histórico</h3>
+      <ol class="historico"></ol>
+    </section>
+  </template>
+
+  <script src="/impressoras.js"></script>
+</body>
+</html>

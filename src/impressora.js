@@ -3,88 +3,188 @@
 // Configure a impressora de cada cozinha por variável de ambiente (ESC/POS via rede, porta 9100):
 //   IMPRESSORA_COZINHA_1=192.168.0.50:9100
 //   IMPRESSORA_COZINHA_2=192.168.0.51
-// Sem configuração, o ticket é "impresso" em impressoes/cozinha-N.txt e no console (modo simulado).
+// Sem configuração, a impressão é simulada: aparece na tela /impressoras.html
+// e fica registrada em impressoes/cozinha-N.txt.
+//
+// O ticket é montado uma única vez como lista de linhas com estilo; dela saem
+// os bytes ESC/POS, o texto puro do log e o JSON que a simulação desenha na tela.
 
 const fs = require('node:fs');
 const net = require('node:net');
 const path = require('node:path');
+const { cozinhas } = require('./menu');
 
 const LARGURA = 42; // colunas em papel 80mm (fonte A, com margem)
-const PASTA_SIMULADA = path.join(__dirname, '..', 'impressoes');
-
-const ESC = '\x1b';
-const GS = '\x1d';
-const CMD = {
-  iniciar: ESC + '@',
-  centro: ESC + 'a' + '\x01',
-  esquerda: ESC + 'a' + '\x00',
-  negritoOn: ESC + 'E' + '\x01',
-  negritoOff: ESC + 'E' + '\x00',
-  duplo: GS + '!' + '\x11',
-  normal: GS + '!' + '\x00',
-  cortar: GS + 'V' + '\x42' + '\x00',
-};
+const PASTA_LOG = path.join(__dirname, '..', 'impressoes');
 
 // Impressoras térmicas raramente têm a code page certa para acentos; removemos.
 function semAcento(texto) {
-  return String(texto).normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return String(texto)
+    .replace(/½/g, '1/2')
+    .replace(/·/g, '-')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
 }
 
-function quebrar(texto, largura, recuo = '') {
+function quebrar(texto, largura) {
   const linhas = [];
   let atual = '';
   for (const palavra of texto.split(/\s+/).filter(Boolean)) {
-    if ((atual + ' ' + palavra).trim().length > largura - recuo.length) {
-      if (atual) linhas.push(recuo + atual);
+    if (atual && (atual + ' ' + palavra).length > largura) {
+      linhas.push(atual);
       atual = palavra;
     } else {
-      atual = (atual + ' ' + palavra).trim();
+      atual = atual ? `${atual} ${palavra}` : palavra;
     }
   }
-  if (atual) linhas.push(recuo + atual);
+  if (atual) linhas.push(atual);
   return linhas;
 }
 
-function hora(iso) {
-  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+function dataHora(iso) {
+  const d = new Date(iso);
+  return `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
 }
 
-// Retorna as partes do ticket; `fmt` decide se aplica comandos ESC/POS ou texto puro.
-function montar(ticket, fmt) {
-  const sep = '-'.repeat(LARGURA);
-  const out = [];
-  out.push(fmt.centro + fmt.duplo + semAcento(ticket.cozinhaNome.toUpperCase()) + fmt.normal);
-  out.push(fmt.duplo + `PEDIDO #${ticket.numeroPedido}` + fmt.normal);
-  const mesa = /^\d+$/.test(ticket.mesa) ? `MESA: ${ticket.mesa}` : ticket.mesa.toUpperCase();
-  out.push(fmt.negritoOn + semAcento(mesa) + fmt.negritoOff + fmt.esquerda);
-  out.push(sep);
-  out.push(semAcento(`Hora: ${hora(ticket.criadoEm)}` + (ticket.garcom ? `   Garcom: ${ticket.garcom}` : '')));
-  out.push(sep);
+// ---------- Montagem ----------
+// Linha: { texto, centro, grande (largura e altura duplas), alto (só altura dupla), negrito, invertido }
+// ou { separador: '-' | '=' } ou { espaco: true }.
+function criarMontador() {
+  const linhas = [];
+  return {
+    linhas,
+    texto(texto, estilo = {}) {
+      const largura = estilo.grande ? LARGURA / 2 : LARGURA;
+      const recuo = estilo.recuo || '';
+      for (const parte of quebrar(semAcento(texto), largura - recuo.length)) {
+        linhas.push({ ...estilo, recuo: undefined, texto: recuo + parte });
+      }
+    },
+    separador(caractere = '-') {
+      linhas.push({ separador: caractere });
+    },
+    espaco() {
+      linhas.push({ espaco: true });
+    },
+  };
+}
+
+function cabecalho(m, ticket) {
+  m.texto(ticket.cozinhaNome.toUpperCase(), { centro: true, grande: true });
+  m.separador('=');
+  m.texto(`PEDIDO #${ticket.numeroPedido}`, { centro: true, grande: true });
+  m.texto(ticket.rotulo.toUpperCase(), { centro: true, grande: true, invertido: ticket.tipo === 'delivery' });
+  if (ticket.tipo === 'delivery') m.texto('EMBALAR PARA VIAGEM', { centro: true, negrito: true });
+  m.separador();
+  m.texto(`${dataHora(ticket.criadoEm)}${ticket.garcom ? `   Garcom: ${ticket.garcom}` : ''}`);
+  m.separador();
+}
+
+function itens(m, ticket) {
   for (const item of ticket.itens) {
-    out.push(fmt.negritoOn + quebrar(semAcento(`${item.qtd}x ${item.nome}`), LARGURA).join('\n') + fmt.negritoOff);
-    if (item.obs) out.push(...quebrar(semAcento(`OBS: ${item.obs}`), LARGURA, '   '));
+    const tamanho = item.tamanho ? `[${item.tamanho.toUpperCase()}] ` : '';
+    if (item.sabores && item.sabores.length === 2) {
+      m.texto(`${item.qtd}x ${tamanho}MEIO A MEIO`, { negrito: true, alto: true });
+      for (const sabor of item.sabores) m.texto(`1/2 ${sabor}`, { negrito: true, alto: true, recuo: '    ' });
+    } else {
+      m.texto(`${item.qtd}x ${tamanho}${item.nome}`, { negrito: true, alto: true });
+    }
+    if (item.obs) m.texto(`>> ${item.obs.toUpperCase()}`, { negrito: true, recuo: '    ' });
   }
-  out.push(sep);
-  out.push(fmt.centro + `Ticket ${ticket.id}` + fmt.esquerda);
-  return out.join('\n') + '\n';
 }
 
-const SEM_FORMATACAO = Object.fromEntries(Object.keys(CMD).map((k) => [k, '']));
-
-function textoDoTicket(ticket) {
-  return montar(ticket, SEM_FORMATACAO);
+function linhasDoTicket(ticket) {
+  const m = criarMontador();
+  cabecalho(m, ticket);
+  itens(m, ticket);
+  m.separador();
+  const total = ticket.itens.reduce((s, i) => s + i.qtd, 0);
+  m.texto(`${total} ${total === 1 ? 'item' : 'itens'} - Ticket ${ticket.id}`, { centro: true });
+  return m.linhas;
 }
 
-function bytesEscPos(ticket) {
-  const corpo = CMD.iniciar + montar(ticket, CMD) + '\n\n\n\n' + CMD.cortar;
-  return Buffer.from(corpo, 'latin1');
+function linhasDoCancelamento(ticket) {
+  const m = criarMontador();
+  m.texto('*** CANCELADO ***', { centro: true, grande: true, invertido: true });
+  m.espaco();
+  cabecalho(m, ticket);
+  m.texto('NAO PREPARAR OS ITENS ABAIXO:', { negrito: true });
+  itens(m, ticket);
+  m.separador();
+  m.texto(`Cancelado em ${dataHora(ticket.atualizadoEm)}`, { centro: true });
+  return m.linhas;
 }
 
+function linhasDoTeste(cozinhaId, destino) {
+  const c = cozinhas[cozinhaId];
+  const m = criarMontador();
+  m.texto('TESTE DE IMPRESSAO', { centro: true, grande: true });
+  m.separador('=');
+  m.texto(`${c.nome} - ${c.setor}`, { centro: true, negrito: true });
+  m.texto(destino ? `Destino: ${destino}` : 'Modo simulado', { centro: true });
+  m.texto(dataHora(new Date().toISOString()), { centro: true });
+  m.separador();
+  m.texto('Texto normal 0123456789');
+  m.texto('Texto em negrito', { negrito: true });
+  m.texto('Altura dupla', { alto: true });
+  m.texto('GRANDE', { grande: true });
+  m.texto(' Invertido ', { invertido: true });
+  m.texto('Acentos: ação, pão, é -> removidos');
+  m.separador();
+  m.texto('Se voce le isto, a impressora esta OK.', { centro: true });
+  return m.linhas;
+}
+
+// ---------- Saídas ----------
+function paraTexto(linhas) {
+  return linhas
+    .map((l) => {
+      if (l.separador) return l.separador.repeat(LARGURA);
+      if (l.espaco) return '';
+      if (!l.centro) return l.texto;
+      const visivel = l.grande ? l.texto.split('').join(' ') : l.texto;
+      return ' '.repeat(Math.max(0, Math.floor((LARGURA - visivel.length) / 2))) + visivel;
+    })
+    .join('\n') + '\n';
+}
+
+const ESC = '\x1b';
+const GS = '\x1d';
+
+function paraEscPos(linhas) {
+  let saida = ESC + '@';
+  for (const l of linhas) {
+    if (l.separador) {
+      saida += ESC + 'a\x00' + l.separador.repeat(LARGURA) + '\n';
+      continue;
+    }
+    if (l.espaco) {
+      saida += '\n';
+      continue;
+    }
+    const tamanho = l.grande ? '\x11' : l.alto ? '\x01' : '\x00';
+    saida += ESC + 'a' + (l.centro ? '\x01' : '\x00');
+    saida += GS + '!' + tamanho;
+    saida += ESC + 'E' + (l.negrito ? '\x01' : '\x00');
+    saida += GS + 'B' + (l.invertido ? '\x01' : '\x00');
+    saida += l.texto + '\n';
+  }
+  saida += GS + '!\x00' + ESC + 'E\x00' + GS + 'B\x00';
+  saida += '\n\n\n\n' + GS + 'V\x42\x00'; // avança e corta o papel
+  return Buffer.from(saida, 'latin1');
+}
+
+// ---------- Envio ----------
 function destinoDaCozinha(cozinhaId) {
   const valor = process.env[`IMPRESSORA_COZINHA_${cozinhaId}`];
   if (!valor) return null;
   const [host, porta] = valor.split(':');
   return { host, porta: Number(porta) || 9100 };
+}
+
+function descreverDestino(cozinhaId) {
+  const d = destinoDaCozinha(cozinhaId);
+  return d ? { modo: 'rede', destino: `${d.host}:${d.porta}` } : { modo: 'simulada', destino: null };
 }
 
 function enviarRede({ host, porta }, dados, timeoutMs = 5000) {
@@ -99,19 +199,29 @@ function enviarRede({ host, porta }, dados, timeoutMs = 5000) {
   });
 }
 
-async function imprimir(ticket) {
-  const destino = destinoDaCozinha(ticket.cozinhaId);
-  if (destino) {
-    await enviarRede(destino, bytesEscPos(ticket));
-    return { modo: 'rede', destino: `${destino.host}:${destino.porta}` };
-  }
-
-  const texto = textoDoTicket(ticket);
-  await fs.promises.mkdir(PASTA_SIMULADA, { recursive: true });
-  const arquivo = path.join(PASTA_SIMULADA, `cozinha-${ticket.cozinhaId}.txt`);
-  await fs.promises.appendFile(arquivo, texto + '='.repeat(LARGURA) + '\n\n');
-  console.log(`\n[impressora simulada cozinha ${ticket.cozinhaId}]\n${texto}`);
-  return { modo: 'simulada', destino: arquivo };
+async function registrarLog(cozinhaId, linhas) {
+  await fs.promises.mkdir(PASTA_LOG, { recursive: true });
+  const arquivo = path.join(PASTA_LOG, `cozinha-${cozinhaId}.txt`);
+  await fs.promises.appendFile(arquivo, paraTexto(linhas) + '~'.repeat(LARGURA) + '\n\n');
 }
 
-module.exports = { imprimir, textoDoTicket, bytesEscPos, destinoDaCozinha };
+// Envia as linhas para a impressora da cozinha. Sempre grava no log;
+// lança erro se a impressora de rede não responder.
+async function enviar(cozinhaId, linhas) {
+  const destino = destinoDaCozinha(cozinhaId);
+  await registrarLog(cozinhaId, linhas).catch(() => {});
+  if (destino) await enviarRede(destino, paraEscPos(linhas));
+  return descreverDestino(cozinhaId);
+}
+
+module.exports = {
+  LARGURA,
+  linhasDoTicket,
+  linhasDoCancelamento,
+  linhasDoTeste,
+  paraTexto,
+  paraEscPos,
+  enviar,
+  descreverDestino,
+  destinoDaCozinha,
+};

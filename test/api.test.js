@@ -62,3 +62,20 @@ test('pedido inválido retorna 400', async () => {
   const res = await fetch(`${base}/api/pedidos`, { method: 'POST', body: JSON.stringify({ mesa: '', itens: [] }) });
   assert.equal(res.status, 400);
 });
+
+test('impressora: teste e comprovante de cancelamento ficam no histórico', async () => {
+  const teste = await (await fetch(`${base}/api/impressoras/1/teste`, { method: 'POST' })).json();
+  assert.equal(teste.tipo, 'teste');
+  assert.equal(teste.modo, 'simulada');
+
+  const pedido = await (await fetch(`${base}/api/pedidos`, {
+    method: 'POST',
+    body: JSON.stringify({ tipo: 'balcao', mesa: 'Rita', itens: [{ produtoId: 'm5', qtd: 1 }] }),
+  })).json();
+  await fetch(`${base}/api/pedidos/${pedido.id}/cancelar`, { method: 'POST' });
+  await new Promise((r) => setTimeout(r, 50));
+
+  const [, cozinha2] = await (await fetch(`${base}/api/impressoras`)).json();
+  const tipos = cozinha2.impressoes.filter((j) => j.numeroPedido === pedido.numero).map((j) => j.tipo);
+  assert.deepEqual(tipos, ['pedido', 'cancelamento']);
+});

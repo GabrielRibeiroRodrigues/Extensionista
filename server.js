@@ -5,8 +5,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { criarStore, ErroValidacao } = require('./src/store');
-const { cozinhas, cardapioPublico } = require('./src/menu');
-const { imprimir } = require('./src/impressora');
+const { loja, cozinhas, cardapioPublico } = require('./src/menu');
+const impressora = require('./src/impressora');
 const { popularExemplos } = require('./src/seed');
 
 const PORTA = Number(process.env.PORT) || 3000;
@@ -25,7 +25,7 @@ const MIME = {
 const store = criarStore();
 
 // ---------- Tempo real (SSE) ----------
-// Cada cliente assina um canal: "cozinha:1", "cozinha:2" ou "garcom".
+// Cada cliente assina um canal: "cozinha:1", "cozinha:2", "garcom" ou "impressoras".
 const clientes = new Set();
 
 function transmitir(canal, evento, dados) {
@@ -49,27 +49,72 @@ setInterval(() => {
   for (const c of clientes) c.res.write(': ping\n\n');
 }, 25000).unref();
 
+// ---------- Impressão ----------
+// Guarda as últimas impressões de cada cozinha para a tela de simulação.
+const MAX_IMPRESSOES = 30;
+const impressoes = [];
+let proximaImpressao = 1;
+
+async function imprimir(cozinhaId, tipo, linhas, ticket = null) {
+  const job = {
+    id: proximaImpressao++,
+    cozinhaId,
+    tipo, // 'pedido' | 'cancelamento' | 'teste'
+    ticketId: ticket ? ticket.id : null,
+    numeroPedido: ticket ? ticket.numeroPedido : null,
+    rotulo: ticket ? ticket.rotulo : null,
+    ...impressora.descreverDestino(cozinhaId),
+    status: 'ok',
+    erro: null,
+    linhas,
+    em: new Date().toISOString(),
+  };
+  // Entra no histórico já na ordem dos pedidos, mesmo que o envio de outro termine antes.
+  impressoes.push(job);
+  const daCozinha = impressoes.filter((j) => j.cozinhaId === cozinhaId);
+  if (daCozinha.length > MAX_IMPRESSOES) impressoes.splice(impressoes.indexOf(daCozinha[0]), 1);
+  try {
+    await impressora.enviar(cozinhaId, linhas);
+  } catch (err) {
+    job.status = 'falhou';
+    job.erro = err.message;
+    console.error(`Falha na impressora da cozinha ${cozinhaId}: ${err.message}`);
+  }
+  transmitir('impressoras', 'impressao', job);
+  return job;
+}
+
+async function imprimirTicket(ticket) {
+  const job = await imprimir(ticket.cozinhaId, 'pedido', impressora.linhasDoTicket(ticket), ticket);
+  const resultado = job.status === 'falhou' ? 'falhou' : job.modo === 'rede' ? 'impresso' : 'simulado';
+  return store.atualizarTicket(ticket.id, { impressao: resultado });
+}
+
+function estadoDasImpressoras() {
+  return Object.values(cozinhas).map((c) => ({
+    cozinhaId: c.id,
+    nome: c.nome,
+    setor: c.setor,
+    ...impressora.descreverDestino(c.id),
+    impressoes: impressoes.filter((j) => j.cozinhaId === c.id),
+  }));
+}
+
+// ---------- Eventos do store -> telas e impressoras ----------
 store.eventos.on('ticket:novo', (ticket) => {
   transmitir(`cozinha:${ticket.cozinhaId}`, 'ticket', ticket);
-  enviarParaImpressora(ticket);
+  imprimirTicket(ticket);
 });
 store.eventos.on('ticket:atualizado', (ticket) => {
   transmitir(`cozinha:${ticket.cozinhaId}`, 'ticket', ticket);
   transmitir('garcom', 'ticket', ticket);
 });
+store.eventos.on('ticket:cancelado', (ticket) => {
+  transmitir(`cozinha:${ticket.cozinhaId}`, 'ticket', ticket);
+  imprimir(ticket.cozinhaId, 'cancelamento', impressora.linhasDoCancelamento(ticket), ticket);
+});
 store.eventos.on('pedido', (pedido) => transmitir('garcom', 'pedido', pedido));
 store.eventos.on('pedido:atualizado', (pedido) => transmitir('garcom', 'pedido', pedido));
-store.eventos.on('ticket:cancelado', (ticket) => transmitir(`cozinha:${ticket.cozinhaId}`, 'ticket', ticket));
-
-async function enviarParaImpressora(ticket) {
-  try {
-    const r = await imprimir(ticket);
-    store.atualizarTicket(ticket.id, { impressao: r.modo === 'rede' ? 'impresso' : 'simulado' });
-  } catch (err) {
-    console.error(`Falha ao imprimir ticket ${ticket.id} (cozinha ${ticket.cozinhaId}):`, err.message);
-    store.atualizarTicket(ticket.id, { impressao: 'falhou' });
-  }
-}
 
 // ---------- HTTP ----------
 function json(res, status, dados) {
@@ -106,48 +151,72 @@ function servirArquivo(res, caminhoUrl) {
   });
 }
 
+function redirecionar(res, destino) {
+  res.writeHead(302, { Location: destino });
+  res.end();
+}
+
+function enderecosLocais() {
+  return Object.values(os.networkInterfaces())
+    .flat()
+    .filter((i) => i && i.family === 'IPv4' && !i.internal)
+    .map((i) => i.address);
+}
+
 async function rotear(req, res) {
   const url = new URL(req.url, 'http://localhost');
   const p = url.pathname;
+  const get = req.method === 'GET';
+  const post = req.method === 'POST';
   let m;
 
-  if (req.method === 'GET' && p === '/api/menu') {
-    return json(res, 200, cardapioPublico());
+  // Cardápio e informações
+  if (get && p === '/api/menu') return json(res, 200, cardapioPublico());
+  if (get && p === '/api/info') {
+    return json(res, 200, { loja, porta: PORTA, enderecos: enderecosLocais(), cozinhas: Object.values(cozinhas) });
   }
-  if (req.method === 'GET' && p === '/api/pedidos') {
-    return json(res, 200, store.pedidosRecentes());
-  }
-  if (req.method === 'POST' && p === '/api/pedidos') {
-    return json(res, 201, store.criarPedido(await lerCorpo(req)));
-  }
-  if ((m = p.match(/^\/api\/pedidos\/(\d+)\/cancelar$/)) && req.method === 'POST') {
+
+  // Pedidos
+  if (get && p === '/api/pedidos') return json(res, 200, store.pedidosRecentes());
+  if (post && p === '/api/pedidos') return json(res, 201, store.criarPedido(await lerCorpo(req)));
+  if (post && (m = p.match(/^\/api\/pedidos\/(\d+)\/cancelar$/))) {
     const pedido = store.cancelarPedido(m[1]);
     return pedido ? json(res, 200, pedido) : json(res, 404, { erro: 'Pedido não encontrado' });
   }
-  if (req.method === 'GET' && p === '/api/garcom/stream') {
-    return abrirStream(req, res, 'garcom');
-  }
-  if ((m = p.match(/^\/api\/cozinhas\/(\d+)\/(tickets|stream)$/)) && req.method === 'GET') {
+  if (get && p === '/api/garcom/stream') return abrirStream(req, res, 'garcom');
+
+  // Cozinhas e tickets
+  if (get && (m = p.match(/^\/api\/cozinhas\/(\d+)\/(tickets|stream)$/))) {
     if (!cozinhas[m[1]]) return json(res, 404, { erro: 'Cozinha não encontrada' });
     if (m[2] === 'stream') return abrirStream(req, res, `cozinha:${m[1]}`);
     return json(res, 200, store.ticketsDaCozinha(m[1]));
   }
-  if ((m = p.match(/^\/api\/tickets\/(\d+)$/)) && req.method === 'PATCH') {
+  if (req.method === 'PATCH' && (m = p.match(/^\/api\/tickets\/(\d+)$/))) {
     const { status } = await lerCorpo(req);
     const ticket = store.atualizarTicket(m[1], { status });
     return ticket ? json(res, 200, ticket) : json(res, 404, { erro: 'Ticket não encontrado' });
   }
-  if ((m = p.match(/^\/api\/tickets\/(\d+)\/imprimir$/)) && req.method === 'POST') {
+  if (post && (m = p.match(/^\/api\/tickets\/(\d+)\/imprimir$/))) {
     const ticket = store.buscarTicket(m[1]);
     if (!ticket) return json(res, 404, { erro: 'Ticket não encontrado' });
-    await enviarParaImpressora(ticket);
-    return json(res, 200, store.buscarTicket(m[1]));
+    return json(res, 200, await imprimirTicket(ticket));
   }
-  if ((m = p.match(/^\/cozinha\/(\d+)\/?$/))) {
-    res.writeHead(302, { Location: `/cozinha.html?id=${m[1]}` });
-    return res.end();
+
+  // Impressoras
+  if (get && p === '/api/impressoras') return json(res, 200, estadoDasImpressoras());
+  if (get && p === '/api/impressoras/stream') return abrirStream(req, res, 'impressoras');
+  if (post && (m = p.match(/^\/api\/impressoras\/(\d+)\/teste$/))) {
+    const cozinhaId = Number(m[1]);
+    if (!cozinhas[cozinhaId]) return json(res, 404, { erro: 'Cozinha não encontrada' });
+    const { destino } = impressora.descreverDestino(cozinhaId);
+    return json(res, 200, await imprimir(cozinhaId, 'teste', impressora.linhasDoTeste(cozinhaId, destino)));
   }
-  if (req.method === 'GET' && !p.startsWith('/api/')) return servirArquivo(res, p);
+
+  // Atalhos de página
+  if ((m = p.match(/^\/cozinha\/(\d+)\/?$/))) return redirecionar(res, `/cozinha.html?id=${m[1]}`);
+  if (p === '/impressoras') return redirecionar(res, '/impressoras.html');
+
+  if (get && !p.startsWith('/api/')) return servirArquivo(res, p);
   return json(res, 404, { erro: 'Rota não encontrada' });
 }
 
@@ -159,23 +228,20 @@ const servidor = http.createServer((req, res) => {
   });
 });
 
-function enderecosLocais() {
-  return Object.values(os.networkInterfaces())
-    .flat()
-    .filter((i) => i && i.family === 'IPv4' && !i.internal)
-    .map((i) => i.address);
-}
-
 if (require.main === module) {
   if (process.env.SEM_EXEMPLOS !== '1') popularExemplos(store);
   servidor.listen(PORTA, () => {
-    const ips = ['localhost', ...enderecosLocais()];
-    console.log('Pizzaria rodando!\n');
-    for (const ip of ips) {
-      console.log(`  Garçom (celular): http://${ip}:${PORTA}/`);
+    const ip = enderecosLocais()[0] || 'localhost';
+    console.log(`\n  ${loja.nome} - sistema de pedidos\n`);
+    console.log(`  Garçom (celular):  http://${ip}:${PORTA}/`);
+    console.log(`  Cozinha 1:         http://${ip}:${PORTA}/cozinha/1`);
+    console.log(`  Cozinha 2:         http://${ip}:${PORTA}/cozinha/2`);
+    console.log(`  Impressoras:       http://${ip}:${PORTA}/impressoras\n`);
+    for (const c of Object.values(cozinhas)) {
+      const d = impressora.descreverDestino(c.id);
+      console.log(`  Impressora ${c.nome}: ${d.modo === 'rede' ? d.destino : 'simulada'}`);
     }
-    console.log(`  Cozinha 1:        http://${ips.at(-1)}:${PORTA}/cozinha/1`);
-    console.log(`  Cozinha 2:        http://${ips.at(-1)}:${PORTA}/cozinha/2\n`);
+    console.log('');
   });
 }
 
