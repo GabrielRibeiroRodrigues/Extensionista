@@ -1,4 +1,6 @@
 FROM node:22-alpine
+# Etiqueta usada pelo deploy.sh para limpar só as imagens antigas deste projeto.
+LABEL app=pizzaria
 
 WORKDIR /app
 ENV NODE_ENV=production \

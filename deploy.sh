@@ -14,7 +14,8 @@ fi
 echo "Enviando $(git rev-parse --short HEAD) para $VPS:$PASTA..."
 git archive --format=tar HEAD | ssh "$VPS" "mkdir -p $PASTA && tar -x -C $PASTA"
 
-ssh "$VPS" "cd $PASTA && docker compose up -d --build && docker image prune -f > /dev/null"
+# O prune filtra pela etiqueta do Dockerfile: imagens de outros projetos não são tocadas.
+ssh "$VPS" "cd $PASTA && docker compose up -d --build && docker image prune -f --filter label=app=pizzaria > /dev/null"
 
 HOST="${VPS#*@}"
 echo "Aguardando o servidor responder..."
