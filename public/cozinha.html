@@ -6,6 +6,7 @@
   <title>Cozinha</title>
   <link rel="icon" href="/icone.svg">
   <link rel="stylesheet" href="/cozinha.css">
+  <link rel="stylesheet" href="/sessao.css">
 </head>
 <body>
   <header class="topo">
@@ -23,9 +24,10 @@
         <input type="checkbox" id="imprimir-local"> Imprimir neste PC
       </label>
       <a class="link" href="/impressoras.html" target="_blank">Impressoras</a>
-      <a id="trocar" class="link" href="#"></a>
+      <a id="trocar" class="link" href="#" hidden></a>
       <button id="tela-cheia" class="link botao-link" title="Tela cheia">⛶</button>
       <time id="relogio"></time>
+      <div id="sessao"></div>
     </div>
   </header>
 
@@ -54,6 +56,7 @@
 
   <div id="area-impressao" class="area-impressao" aria-hidden="true"></div>
 
+  <script src="/sessao.js"></script>
   <script src="/cozinha.js"></script>
 </body>
 </html>

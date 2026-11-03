@@ -160,7 +160,7 @@ function criarImpressora(estado) {
   $('.teste', el).addEventListener('click', async (e) => {
     e.target.disabled = true;
     try {
-      const res = await fetch(`/api/impressoras/${estado.cozinhaId}/teste`, { method: 'POST' });
+      const res = await Sessao.api(`/api/impressoras/${estado.cozinhaId}/teste`, { method: 'POST' });
       if (!res.ok) throw new Error(`o servidor respondeu ${res.status}`);
     } catch (err) {
       mostrarErro(imp, { erro: `${err.message}. Se o servidor foi atualizado, reinicie-o (Ctrl+C e npm start).` });
@@ -184,7 +184,7 @@ function criarImpressora(estado) {
 
 async function carregar() {
   const raiz = $('#impressoras');
-  const res = await fetch('/api/impressoras').catch(() => null);
+  const res = await Sessao.api('/api/impressoras').catch(() => null);
   if (!res || !res.ok) {
     raiz.innerHTML = `<p class="falha-geral">Não foi possível carregar as impressoras${res ? ` (o servidor respondeu ${res.status})` : ''}.
       Se o sistema foi atualizado, reinicie o servidor: <code>Ctrl+C</code> e <code>npm start</code>.</p>`;
@@ -201,7 +201,7 @@ async function carregar() {
 }
 
 function conectar() {
-  const fonte = new EventSource('/api/impressoras/stream');
+  const fonte = Sessao.vigiar(new EventSource('/api/impressoras/stream'));
   fonte.addEventListener('impressao', (e) => {
     const job = JSON.parse(e.data);
     const imp = impressoras.get(job.cozinhaId);
@@ -221,5 +221,10 @@ function conectar() {
 }
 
 $('#som').addEventListener('click', alternarSom);
-carregar();
-conectar();
+(async () => {
+  await Sessao.carregar();
+  // O servidor só entrega as impressoras do cargo (cozinha vê só a sua).
+  $('#voltar').hidden = !Sessao.pode('painel');
+  carregar();
+  conectar();
+})();

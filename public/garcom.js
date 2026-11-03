@@ -27,13 +27,6 @@ const estado = {
 };
 let proximaLinha = 1;
 
-function guardar(chave, valor) {
-  try { localStorage.setItem(chave, valor); } catch {}
-}
-function lerGuardado(chave) {
-  try { return localStorage.getItem(chave) || ''; } catch { return ''; }
-}
-
 // ---------- Cardápio: consultas ----------
 const produto = (id) => estado.menu.produtos.find((p) => p.id === id);
 const categoria = (id) => estado.menu.categorias.find((c) => c.id === id);
@@ -279,13 +272,12 @@ async function enviarPedido() {
   botao.disabled = true;
   botao.textContent = 'Enviando…';
   try {
-    const res = await fetch('/api/pedidos', {
+    // O garçom do pedido é quem está logado (o servidor preenche).
+    const res = await Sessao.api('/api/pedidos', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         tipo: estado.tipo,
         mesa: identificador,
-        garcom: $('#garcom').value.trim(),
         itens: estado.linhas.map(({ produtoId, metadeId, tamanho, qtd, obs }) => ({ produtoId, metadeId, tamanho, qtd, obs })),
       }),
     });
@@ -321,10 +313,17 @@ function mostrarSucesso(pedido) {
 }
 
 // ---------- Acompanhar ----------
+// Espelha a regra do servidor, só para mostrar ou esconder o botão.
+function podeCancelar(p) {
+  if (p.cancelado || p.tickets.every((t) => t.status === 'pronto')) return false;
+  if (Sessao.pode('pedido:cancelar:todos')) return true;
+  return Sessao.pode('pedido:cancelar:proprios') && p.garcomId === Sessao.usuario.id && p.tickets.every((t) => t.status === 'novo');
+}
+
 function renderPedidos() {
-  const meu = normalizar($('#garcom').value.trim());
+  // O servidor já entrega só o que o cargo pode ver; "Meus" filtra entre eles.
   const lista = estado.pedidos.filter((p) =>
-    p.tickets.length && (estado.filtro === 'todos' || !meu || normalizar(p.garcom || '') === meu));
+    p.tickets.length && (estado.filtro === 'todos' || p.garcomId === Sessao.usuario.id));
 
   $('#badge-prontos').hidden = estado.prontosNaoVistos === 0;
   $('#badge-prontos').textContent = estado.prontosNaoVistos;
@@ -332,7 +331,6 @@ function renderPedidos() {
   $('#lista-pedidos').innerHTML = lista.length
     ? lista.map((p) => {
       const qtd = p.itens.reduce((s, i) => s + i.qtd, 0);
-      const podeCancelar = !p.cancelado && p.tickets.some((t) => t.status !== 'pronto');
       return `
         <article class="pedido-card${p.cancelado ? ' cancelado' : ''}">
           <header><h4>#${p.numero} · ${esc(p.rotulo)}</h4><time>${hora(p.criadoEm)}</time></header>
@@ -345,10 +343,10 @@ function renderPedidos() {
                 <span class="status ${t.status}">${ROTULO_STATUS[t.status]}</span>
               </span>
             </div>`).join('')}
-          ${podeCancelar ? `<button class="cancelar" data-cancelar="${p.id}">Cancelar pedido</button>` : ''}
+          ${podeCancelar(p) ? `<button class="cancelar" data-cancelar="${p.id}">Cancelar pedido</button>` : ''}
         </article>`;
     }).join('')
-    : `<p class="vazio">${estado.filtro === 'meus' && meu ? 'Você ainda não enviou pedidos.' : 'Nenhum pedido enviado para as cozinhas.'}</p>`;
+    : `<p class="vazio">${estado.filtro === 'meus' ? 'Você ainda não enviou pedidos.' : 'Nenhum pedido enviado para as cozinhas.'}</p>`;
 }
 
 async function cancelarPedido(id) {
@@ -361,14 +359,14 @@ async function cancelarPedido(id) {
   const resposta = await new Promise((r) => dialogo.addEventListener('close', () => r(dialogo.returnValue), { once: true }));
   if (resposta !== 'sim') return;
 
-  const res = await fetch(`/api/pedidos/${id}/cancelar`, { method: 'POST' });
+  const res = await Sessao.api(`/api/pedidos/${id}/cancelar`, { method: 'POST' });
   const dados = await res.json();
   if (!res.ok) return avisar(dados.erro || 'Não foi possível cancelar.', 'erro');
   avisar(`Pedido #${pedido.numero} cancelado.`, 'ok');
 }
 
 function conectarTempoReal() {
-  const fonte = new EventSource('/api/garcom/stream');
+  const fonte = Sessao.vigiar(new EventSource('/api/garcom/stream'));
   fonte.addEventListener('pedido', (e) => {
     const pedido = JSON.parse(e.data);
     estado.pedidos = [pedido, ...estado.pedidos.filter((p) => p.id !== pedido.id)].sort((a, b) => b.id - a.id);
@@ -389,7 +387,7 @@ function conectarTempoReal() {
   });
   fonte.onopen = async () => {
     $('#conexao').classList.add('on');
-    estado.pedidos = await (await fetch('/api/pedidos')).json();
+    estado.pedidos = await (await Sessao.api('/api/pedidos')).json();
     renderPedidos();
   };
   fonte.onerror = () => $('#conexao').classList.remove('on');
@@ -489,11 +487,6 @@ function ligarEventos() {
     renderProdutos();
   });
   $('#identificador').addEventListener('input', (e) => e.target.classList.remove('erro'));
-  $('#garcom').value = lerGuardado('garcom');
-  $('#garcom').addEventListener('change', (e) => {
-    guardar('garcom', e.target.value.trim());
-    renderPedidos();
-  });
   $('#barra-carrinho').addEventListener('click', () => {
     renderCarrinho();
     abrirFolha('carrinho');
@@ -507,9 +500,12 @@ function ligarEventos() {
 }
 
 async function iniciar() {
+  await Sessao.carregar();
+  // Gerente e dono podem alternar entre os seus pedidos e os de todos.
+  $('#filtro').hidden = !Sessao.pode('pedido:ver:todos');
   ligarEventos();
   try {
-    estado.menu = await (await fetch('/api/menu')).json();
+    estado.menu = await (await Sessao.api('/api/menu')).json();
   } catch {
     return avisar('Não foi possível carregar o cardápio. Verifique a conexão.', 'erro');
   }

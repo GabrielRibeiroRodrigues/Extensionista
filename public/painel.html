@@ -43,21 +43,26 @@
 
     .dica { margin-top: 28px; background: var(--papel); border-radius: 14px; padding: 16px 18px; color: var(--suave); font-size: 14px; line-height: 1.5; }
     .dica b { color: var(--tinta); }
+    .faixa > div { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
   </style>
+  <link rel="stylesheet" href="/sessao.css">
 </head>
 <body>
   <header class="faixa">
     <div>
-      <small id="subtitulo">Sistema de pedidos</small>
-      <h1 id="loja">Pizzaria</h1>
+      <div>
+        <small id="subtitulo">Sistema de pedidos</small>
+        <h1 id="loja">Pizzaria</h1>
+      </div>
+      <div id="sessao"></div>
     </div>
   </header>
 
   <main>
     <section class="numeros">
       <div class="numero"><span>Pedidos</span><b id="r-pedidos">–</b></div>
-      <div class="numero"><span>Faturamento</span><b id="r-faturamento">–</b></div>
-      <div class="numero"><span>Ticket médio</span><b id="r-medio">–</b></div>
+      <div class="numero" data-faturamento hidden><span>Faturamento</span><b id="r-faturamento">–</b></div>
+      <div class="numero" data-faturamento hidden><span>Ticket médio</span><b id="r-medio">–</b></div>
       <div class="numero"><span>Cancelados</span><b id="r-cancelados">–</b></div>
     </section>
 
@@ -70,6 +75,7 @@
     </p>
   </main>
 
+  <script src="/sessao.js"></script>
   <script>
     const $ = (s) => document.querySelector(s);
     const brl = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -82,8 +88,9 @@
 
     function renderTelas(resumo) {
       const b = base();
+      // Só as telas que o cargo pode abrir.
       const cards = [
-        { icone: '📱', titulo: 'Garçom', texto: 'Celular: monta e envia os pedidos.', url: `${b}/` },
+        { icone: '📱', titulo: 'Garçom', texto: 'Celular: monta e envia os pedidos.', url: `${b}/`, perm: ['pedido:criar'] },
         ...info.cozinhas.map((c) => {
           const f = resumo.porCozinha[c.id];
           return {
@@ -91,11 +98,13 @@
             titulo: `${c.nome} · ${c.setor}`,
             texto: 'Tela da cozinha com os pedidos em tempo real.',
             url: `${b}/cozinha/${c.id}`,
+            perm: [`cozinha:${c.id}`],
             fila: `<span class="novo">${f.novo} na fila</span><span class="preparo">${f.preparo} em preparo</span><span class="pronto">${f.pronto} prontos</span>`,
           };
         }),
-        { icone: '🖨️', titulo: 'Impressoras', texto: 'Simulação do que sai em cada impressora.', url: `${b}/impressoras` },
-      ];
+        { icone: '🖨️', titulo: 'Impressoras', texto: 'Simulação do que sai em cada impressora.', url: `${b}/impressoras`, perm: ['impressora:1', 'impressora:2'] },
+        { icone: '👥', titulo: 'Usuários', texto: 'Criar e desativar acessos, trocar PINs.', url: `${b}/usuarios`, perm: ['usuarios:todos', 'usuarios:equipe'] },
+      ].filter((c) => Sessao.pode(...c.perm));
       $('#telas').innerHTML = cards.map((c) => `
         <a class="tela" href="${c.url}" target="_blank">
           <span class="icone">${c.icone}</span>
@@ -108,17 +117,22 @@
 
     async function atualizar() {
       try {
-        const r = await (await fetch('/api/resumo')).json();
+        const r = await (await Sessao.api('/api/resumo')).json();
         $('#r-pedidos').textContent = r.pedidos;
-        $('#r-faturamento').textContent = brl(r.faturamento);
-        $('#r-medio').textContent = brl(r.ticketMedio);
         $('#r-cancelados').textContent = r.cancelados;
+        // O servidor só manda faturamento para o dono.
+        if (r.faturamento !== undefined) {
+          $('#r-faturamento').textContent = brl(r.faturamento);
+          $('#r-medio').textContent = brl(r.ticketMedio);
+        }
         renderTelas(r);
       } catch {}
     }
 
     (async () => {
-      info = await (await fetch('/api/info')).json();
+      await Sessao.carregar();
+      document.querySelectorAll('[data-faturamento]').forEach((el) => (el.hidden = !Sessao.pode('faturamento')));
+      info = await (await Sessao.api('/api/info')).json();
       $('#loja').textContent = info.loja.nome;
       $('#subtitulo').textContent = `${info.loja.subtitulo} · Sistema de pedidos`;
       document.title = `${info.loja.nome} · Painel`;

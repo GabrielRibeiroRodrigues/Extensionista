@@ -107,19 +107,19 @@ function alertarCancelamento(t) {
 
 // ---------- Ações ----------
 async function mudarStatus(id, status) {
-  const res = await fetch(`/api/tickets/${id}`, {
+  const res = await Sessao.api(`/api/tickets/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status }),
   });
   if (res.ok) receber(await res.json(), false);
+  else Sessao.avisar((await res.json()).erro || 'Não foi possível atualizar.');
 }
 
 async function reimprimir(id) {
   const t = tickets.get(id);
   t.impressao = 'pendente';
   render();
-  const res = await fetch(`/api/tickets/${id}/imprimir`, { method: 'POST' }).catch(() => null);
+  const res = await Sessao.api(`/api/tickets/${id}/imprimir`, { method: 'POST' }).catch(() => null);
   if (res && res.ok) {
     receber(await res.json(), false);
   } else {
@@ -200,13 +200,13 @@ function receber(ticket, doServidor) {
 }
 
 function conectar() {
-  const fonte = new EventSource(`/api/cozinhas/${COZINHA_ID}/stream`);
+  const fonte = Sessao.vigiar(new EventSource(`/api/cozinhas/${COZINHA_ID}/stream`));
   fonte.addEventListener('ticket', (e) => receber(JSON.parse(e.data), true));
   fonte.onopen = async () => {
     $('#conexao').className = 'conexao on';
     $('#conexao').textContent = 'ao vivo';
     // Recarrega tudo ao (re)conectar para não perder pedidos enviados durante a queda.
-    const lista = await (await fetch(`/api/cozinhas/${COZINHA_ID}/tickets`)).json();
+    const lista = await (await Sessao.api(`/api/cozinhas/${COZINHA_ID}/tickets`)).json();
     tickets.clear();
     for (const t of lista) tickets.set(t.id, t);
     render();
@@ -220,12 +220,15 @@ function conectar() {
 // ---------- Início ----------
 async function iniciar() {
   document.documentElement.dataset.cozinha = COZINHA_ID;
+  await Sessao.carregar();
+  // Atalho para a outra cozinha só para quem pode ver as duas (gerente e dono).
   const outra = COZINHA_ID === 1 ? 2 : 1;
+  $('#trocar').hidden = !Sessao.pode(`cozinha:${outra}`);
   $('#trocar').href = `/cozinha.html?id=${outra}`;
   $('#trocar').textContent = `Cozinha ${outra}`;
 
   try {
-    const { loja, cozinhas } = await (await fetch('/api/menu')).json();
+    const { loja, cozinhas } = await (await Sessao.api('/api/menu')).json();
     const c = cozinhas[COZINHA_ID];
     if (c) {
       $('#nome-cozinha').textContent = `${c.nome} · ${c.setor}`;

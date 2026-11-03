@@ -9,12 +9,13 @@
   <link rel="apple-touch-icon" href="/icone.svg">
   <title>Pedidos · Garçom</title>
   <link rel="stylesheet" href="/garcom.css">
+  <link rel="stylesheet" href="/sessao.css">
 </head>
 <body>
   <header class="topo">
     <div class="topo-linha">
-      <div class="marca"><span id="nome-loja">Pizzaria</span> <small>Garçom</small></div>
-      <span id="conexao" class="conexao" title="Conexão com o servidor"></span>
+      <div class="marca"><span id="nome-loja">Pizzaria</span> <span id="conexao" class="conexao" title="Conexão com o servidor"></span></div>
+      <div id="sessao"></div>
     </div>
     <nav class="abas" role="tablist">
       <button class="aba ativa" data-aba="cardapio" role="tab">Novo pedido</button>
@@ -33,9 +34,6 @@
         <label><span id="rotulo-identificador">Nº da mesa</span>
           <input id="identificador" inputmode="numeric" placeholder="Ex.: 12" autocomplete="off" maxlength="3">
         </label>
-        <label>Garçom
-          <input id="garcom" placeholder="Seu nome" autocomplete="off" maxlength="40">
-        </label>
       </div>
     </section>
 
@@ -47,7 +45,7 @@
   </main>
 
   <main id="pedidos" class="tela" hidden>
-    <div class="filtro">
+    <div class="filtro" id="filtro" hidden>
       <div class="segmentado pequeno" role="radiogroup" aria-label="Filtro">
         <button data-filtro="meus" class="ativo">Meus pedidos</button>
         <button data-filtro="todos">Todos</button>
@@ -134,6 +132,7 @@
 
   <div id="aviso" class="aviso" role="status" hidden></div>
 
+  <script src="/sessao.js"></script>
   <script src="/garcom.js"></script>
 </body>
 </html>

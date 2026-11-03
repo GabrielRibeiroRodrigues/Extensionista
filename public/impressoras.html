@@ -6,15 +6,17 @@
   <title>Impressoras · Simulação</title>
   <link rel="icon" href="/icone.svg">
   <link rel="stylesheet" href="/impressoras.css">
+  <link rel="stylesheet" href="/sessao.css">
 </head>
 <body>
   <header class="topo">
     <div>
-      <a class="voltar" href="/painel.html">← Painel</a>
+      <a class="voltar" id="voltar" href="/painel.html" hidden>← Painel</a>
       <h1>Impressoras das cozinhas</h1>
       <p>Cada pedido aparece aqui exatamente como sai na impressora térmica da cozinha.</p>
     </div>
     <div class="topo-acoes">
+      <div id="sessao"></div>
       <span id="conexao" class="conexao off">desconectado</span>
       <button id="som" class="botao" aria-pressed="false">🔇 Som desligado</button>
     </div>
@@ -53,6 +55,7 @@
     </section>
   </template>
 
+  <script src="/sessao.js"></script>
   <script src="/impressoras.js"></script>
 </body>
 </html>

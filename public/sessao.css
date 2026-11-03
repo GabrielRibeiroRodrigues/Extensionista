@@ -11,7 +11,7 @@
 }
 .cracha-texto { display: grid; line-height: 1.1; text-align: left; }
 .cracha-texto b { font-size: 13px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cracha-texto small { font-size: 11px; opacity: .8; }
+.cracha .cracha-texto small { font-size: 11px; opacity: .8; text-transform: none; letter-spacing: 0; }
 .cracha-menu {
   position: absolute; right: 0; top: calc(100% + 8px); z-index: 50; min-width: 220px;
   background: #fff; color: #2b2118; border-radius: 12px; padding: 6px;
