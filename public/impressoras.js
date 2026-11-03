@@ -146,7 +146,7 @@ function alternarSom() {
     } catch {}
   }
   botao.setAttribute('aria-pressed', String(!!audio));
-  botao.textContent = audio ? '🔊 Som ligado' : '🔇 Som desligado';
+  botao.textContent = audio ? 'Desligar som' : 'Ligar som';
 }
 
 // ---------- Montagem ----------

@@ -3,21 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cozinha</title>
+  <meta name="theme-color" content="#ffc72c">
+  <title>Cozinha · Frangonete</title>
   <link rel="icon" href="/icone.svg">
+  <link rel="stylesheet" href="/marca.css">
   <link rel="stylesheet" href="/cozinha.css">
   <link rel="stylesheet" href="/sessao.css">
 </head>
 <body>
   <header class="topo">
     <div class="titulo">
-      <h1 id="nome-cozinha">Cozinha</h1>
-      <span id="conexao" class="conexao off" title="Conexão com o servidor">desconectado</span>
+      <img src="/mascote.svg" alt="">
+      <div>
+        <h1 id="setor" class="marca-nome">Cozinha</h1>
+        <span class="sub"><span id="nome-cozinha">Cozinha</span> <span id="conexao" class="conexao off" title="Conexão com o servidor">desconectado</span></span>
+      </div>
     </div>
     <div class="contadores">
-      <span class="contador novo"><b id="n-novo">0</b> na fila</span>
-      <span class="contador preparo"><b id="n-preparo">0</b> em preparo</span>
-      <span class="contador atrasado"><b id="n-atrasado">0</b> atrasados</span>
+      <span class="contador fila"><b id="n-novo">0</b>na fila</span>
+      <span class="contador brasa"><b id="n-preparo">0</b>em preparo</span>
+      <span class="contador atraso"><b id="n-atrasado">0</b>atrasados</span>
     </div>
     <div class="acoes">
       <label class="interruptor" title="Abre a impressão do navegador a cada pedido novo (use com impressora USB neste computador)">
@@ -25,8 +30,8 @@
       </label>
       <a class="link" href="/impressoras.html" target="_blank">Impressoras</a>
       <a id="trocar" class="link" href="#" hidden></a>
-      <button id="tela-cheia" class="link botao-link" title="Tela cheia">⛶</button>
-      <time id="relogio"></time>
+      <button id="tela-cheia" class="link botao-link" title="Tela cheia" aria-label="Tela cheia">⛶</button>
+      <time id="relogio" class="marca-nome"></time>
       <div id="sessao"></div>
     </div>
   </header>
@@ -34,7 +39,7 @@
   <main id="tickets" class="tickets"></main>
 
   <footer class="prontos">
-    <span class="rotulo">Prontos</span>
+    <span class="rotulo">Prontos para servir</span>
     <div id="lista-prontos"></div>
   </footer>
 
@@ -43,14 +48,16 @@
       <strong id="cancelado-titulo"></strong>
       <span id="cancelado-texto"></span>
     </div>
-    <button id="fechar-cancelado" aria-label="Fechar">OK</button>
+    <button id="fechar-cancelado" class="adesivo" aria-label="Fechar">Entendi</button>
   </div>
 
   <div id="ativar" class="ativar">
     <button id="botao-ativar">
-      <small id="ativar-loja"></small>
-      <strong id="ativar-titulo">Cozinha</strong>
-      <span>Toque para abrir a tela e ativar o som de novos pedidos</span>
+      <img src="/mascote.svg" alt="">
+      <strong id="ativar-titulo" class="marca-nome">Cozinha</strong>
+      <span id="ativar-loja"></span>
+      <span class="adesivo">Abrir a tela da cozinha</span>
+      <small>O som avisa quando chega pedido novo</small>
     </button>
   </div>
 

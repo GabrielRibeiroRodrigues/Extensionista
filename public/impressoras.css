@@ -1,42 +1,36 @@
+/* Simulação das impressoras. Cores e fontes da marca vêm de marca.css. */
 :root {
-  --fundo: #e9e4dc;
-  --texto: #2b2118;
-  --suave: #7a6a5c;
   --corpo: #2a2b30;
   --corpo-claro: #3a3c43;
-  --papel: #fffdf7;
+  --papel-termico: #fffdf7;
   --tinta-papel: #1c1c1c;
   --verde: #3ddc84;
   --ambar: #f5b041;
   --vermelho: #e5483d;
-  --destaque: #b3261e;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  color: var(--texto);
-  background: var(--fundo);
+  --destaque: var(--forno);
+  --suave: var(--forno-suave);
+  --texto: var(--forno);
 }
 * { box-sizing: border-box; }
-body { margin: 0; min-height: 100vh; background: var(--fundo); }
+body { margin: 0; min-height: 100vh; background: var(--gema-clara); color: var(--forno); font-family: var(--fonte); }
 button { font: inherit; cursor: pointer; }
 [hidden] { display: none !important; }
 
-.topo {
-  display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap;
-  padding: 20px 24px 8px; max-width: 1100px; margin: 0 auto;
-}
-.voltar { color: var(--suave); text-decoration: none; font-size: 14px; }
-.topo h1 { margin: 6px 0 4px; font-size: 26px; }
-.topo p { margin: 0; color: var(--suave); }
+.topo { background: var(--gema); border-bottom: 3px solid var(--forno); padding: 12px 20px; }
+.topo-conteudo { max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 10px; color: var(--forno); text-decoration: none; }
+.logo img { width: 44px; height: 44px; }
+.logo .marca-nome { font-size: 28px; }
 .topo-acoes { display: flex; align-items: center; gap: 12px; }
-.conexao { font-size: 13px; color: var(--suave); }
-.conexao::before { content: "●"; margin-right: 6px; }
-.conexao.on::before { color: #2e9e5b; }
-.conexao.off::before { color: var(--vermelho); }
+.cabeca { max-width: 1100px; margin: 0 auto; padding: 26px 24px 0; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.cabeca h1 { margin: 0 0 4px; font-size: 30px; font-weight: 800; letter-spacing: -.5px; }
+.cabeca p { margin: 0; color: var(--forno-suave); max-width: 60ch; }
+.cabeca-acoes { display: flex; align-items: center; gap: 12px; }
+.conexao { font-size: 14px; font-weight: 700; }
+.conexao::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--forno); margin-right: 6px; vertical-align: -1px; background: var(--tomate); }
+.conexao.on::before { background: var(--manjericao); }
 
-.botao {
-  border: 1px solid rgba(0,0,0,.15); background: #fff; color: var(--texto);
-  border-radius: 10px; padding: 8px 14px; font-weight: 600; font-size: 14px;
-}
-.botao:hover { background: #f6f2ec; }
+.botao { padding: 9px 16px; font-size: 14px; }
 
 .impressoras {
   display: grid; gap: 40px; padding: 24px; max-width: 1100px; margin: 0 auto;
@@ -83,15 +77,15 @@ button { font: inherit; cursor: pointer; }
 /* ----- Papel ----- */
 .bandeja { width: 100%; display: flex; justify-content: center; margin-top: -14px; overflow: hidden; padding-bottom: 14px; }
 .papel {
-  position: relative; background: var(--papel); color: var(--tinta-papel);
+  position: relative; background: var(--papel-termico); color: var(--tinta-papel);
   padding: 22px 14px 18px; box-shadow: 0 6px 14px rgba(0,0,0,.12);
-  max-width: 100%; overflow-x: auto;
+  max-width: 100%; overflow: hidden;
 }
 .papel::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: -8px; height: 8px;
   background:
-    linear-gradient(135deg, var(--papel) 50%, transparent 50%) 0 0 / 12px 8px repeat-x,
-    linear-gradient(225deg, var(--papel) 50%, transparent 50%) 0 0 / 12px 8px repeat-x;
+    linear-gradient(135deg, var(--papel-termico) 50%, transparent 50%) 0 0 / 12px 8px repeat-x,
+    linear-gradient(225deg, var(--papel-termico) 50%, transparent 50%) 0 0 / 12px 8px repeat-x;
 }
 .papel.saindo { animation: sair .25s ease-out; }
 @keyframes sair { from { transform: translateY(-30px); } }
@@ -106,12 +100,12 @@ button { font: inherit; cursor: pointer; }
 .l.b { font-weight: 700; }
 .l.g { font-size: 2em; font-weight: 700; line-height: 1.15; }
 .l.a { transform: scaleY(1.8); transform-origin: 0 0; margin-bottom: 1em; }
-.l .inv { background: var(--tinta-papel); color: var(--papel); padding: 0 .2em; }
+.l .inv { background: var(--tinta-papel); color: var(--papel-termico); padding: 0 .2em; }
 .l.sep { color: #555; overflow: hidden; }
 .l.oculta { visibility: hidden; }
 
 /* ----- Histórico ----- */
-.titulo-historico { align-self: stretch; max-width: 420px; width: 100%; margin: 18px auto 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--suave); }
+.titulo-historico { align-self: stretch; max-width: 420px; width: 100%; margin: 18px auto 6px; font-size: 17px; font-weight: 800; color: var(--forno); }
 .historico { list-style: none; padding: 0; margin: 0 auto; width: 100%; max-width: 420px; }
 .historico li button {
   width: 100%; display: flex; gap: 10px; align-items: center; text-align: left;
@@ -119,8 +113,8 @@ button { font: inherit; cursor: pointer; }
   color: var(--texto);
 }
 .historico li button:hover { border-color: rgba(0,0,0,.15); }
-.historico li button.atual { border-color: var(--destaque); }
-.historico .h-tipo { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: #eee; }
+.historico li button.atual { border-color: var(--forno); background: var(--gema-media); }
+.historico .h-tipo { font-size: 12px; font-weight: 800; padding: 2px 9px; border-radius: 99px; background: var(--gema); border: 1.5px solid var(--forno); }
 .historico .h-tipo.cancelamento { background: #fde8e6; color: #8c1d17; }
 .historico .h-tipo.teste { background: #e7f0fb; color: #1f5fa8; }
 .historico .h-desc { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -132,3 +126,5 @@ button { font: inherit; cursor: pointer; }
   padding: 16px 18px; font-weight: 600; line-height: 1.5;
 }
 .falha-geral code { background: #fff; padding: 1px 6px; border-radius: 6px; }
+.voltar { display: inline-block; margin-bottom: 8px; color: var(--forno); font-weight: 700; }
+@media (max-width: 460px) { .conteudo { font-size: 9.5px; } }

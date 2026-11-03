@@ -47,19 +47,19 @@ function htmlTicket(t) {
   if (min >= MINUTOS_ATRASO) classes.push('atrasado');
   if (recemChegados.has(t.id)) classes.push('chegou');
   const acao = t.status === 'novo'
-    ? `<button class="btn iniciar" data-status="preparo">Iniciar</button>`
-    : `<button class="btn pronto" data-status="pronto">Pronto ✓</button>`;
+    ? `<button class="adesivo btn iniciar" data-status="preparo">Começar</button>`
+    : `<button class="adesivo verde btn pronto" data-status="pronto">Pronto</button>`;
 
   return `
     <article class="${classes.join(' ')}" data-id="${t.id}">
       <header>
         <div>
           <div class="mesa">${esc(t.rotulo)}</div>
-          <div class="numero">#${t.numeroPedido} · ${hora(t.criadoEm)}${t.garcom ? ` · ${esc(t.garcom)}` : ''}</div>
+          <div class="numero">Pedido #${t.numeroPedido}, ${hora(t.criadoEm)}${t.garcom ? `<br>${esc(t.garcom)}` : ''}</div>
         </div>
         <div class="tempo" data-tempo="${t.criadoEm}">${min}<small>min</small></div>
       </header>
-      ${t.tipo === 'delivery' ? '<div class="faixa-delivery">🛵 Delivery · embalar para viagem</div>' : ''}
+      ${t.tipo === 'delivery' ? '<div class="faixa-delivery">Delivery: embalar para viagem</div>' : ''}
       <ul>${t.itens.map(htmlItem).join('')}</ul>
       <div class="rodape">
         <span class="info ${t.impressao}">${ROTULO_IMPRESSAO[t.impressao] || ''}</span>
@@ -76,7 +76,7 @@ function render() {
 
   $('#tickets').innerHTML = ativos.length
     ? ativos.map(htmlTicket).join('')
-    : '<div class="vazio"><div class="vazio-icone">✓</div>Nenhum pedido na fila</div>';
+    : '<div class="vazio"><img src="/mascote.svg" alt=""><b>Nenhum pedido na fila</b>Os pedidos novos aparecem aqui assim que o garçom enviar.</div>';
   $('#lista-prontos').innerHTML = prontos.length
     ? prontos.map((t) => `<button class="chip-pronto" data-id="${t.id}" title="Tocar para voltar ao preparo">${esc(t.rotulo)} <small>#${t.numeroPedido}</small></button>`).join('')
     : '<span class="nenhum-pronto">—</span>';
@@ -231,10 +231,11 @@ async function iniciar() {
     const { loja, cozinhas } = await (await Sessao.api('/api/menu')).json();
     const c = cozinhas[COZINHA_ID];
     if (c) {
-      $('#nome-cozinha').textContent = `${c.nome} · ${c.setor}`;
-      $('#ativar-titulo').textContent = `${c.nome} · ${c.setor}`;
-      $('#ativar-loja').textContent = loja.nome;
-      document.title = `${c.nome} · ${c.setor}`;
+      $('#setor').textContent = c.setor;
+      $('#nome-cozinha').textContent = c.nome;
+      $('#ativar-titulo').textContent = c.setor;
+      $('#ativar-loja').textContent = `${c.nome} da ${loja.nome}`;
+      document.title = `${c.setor} · ${loja.nome}`;
     }
   } catch {}
 

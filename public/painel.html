@@ -3,81 +3,92 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Painel</title>
+  <meta name="theme-color" content="#ffc72c">
+  <title>Painel · Frangonete</title>
   <link rel="icon" href="/icone.svg">
-  <style>
-    :root {
-      --vermelho: #b3261e; --azul: #1f5fa8; --creme: #f7f2ea; --papel: #fff; --tinta: #2b2118;
-      --suave: #7a6a5c; --linha: #e9dfd2; --verde: #2e7d32; --amarelo: #b26a00;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--tinta); background: var(--creme);
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; background: var(--creme); }
-    .faixa { background: var(--vermelho); color: #fff; padding: 28px 24px 70px; }
-    .faixa > div, main { max-width: 1040px; margin: 0 auto; }
-    .faixa small { text-transform: uppercase; letter-spacing: 2px; opacity: .8; font-size: 12px; }
-    .faixa h1 { margin: 4px 0 0; font-size: 30px; }
-    main { padding: 0 24px 40px; margin-top: -48px; }
-
-    .numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
-    .numero { background: var(--papel); border-radius: 14px; padding: 16px 18px; box-shadow: 0 2px 10px rgba(43,33,24,.08); }
-    .numero span { display: block; color: var(--suave); font-size: 13px; font-weight: 600; }
-    .numero b { display: block; font-size: 28px; margin-top: 4px; font-variant-numeric: tabular-nums; }
-
-    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--suave); margin: 28px 0 10px; }
-    .telas { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
-    .tela {
-      display: flex; flex-direction: column; gap: 6px; background: var(--papel); border-radius: 14px; padding: 18px;
-      text-decoration: none; color: inherit; border: 1.5px solid transparent; box-shadow: 0 2px 10px rgba(43,33,24,.06);
-    }
-    .tela:hover { border-color: var(--vermelho); }
-    .tela .icone { font-size: 26px; }
-    .tela strong { font-size: 18px; }
-    .tela p { margin: 0; color: var(--suave); font-size: 14px; flex: 1; }
-    .tela code { font-size: 13px; background: var(--creme); padding: 6px 8px; border-radius: 8px; word-break: break-all; }
-    .fila { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-    .fila span { font-size: 12px; font-weight: 700; color: #fff; padding: 2px 9px; border-radius: 99px; }
-    .fila .novo { background: var(--amarelo); }
-    .fila .preparo { background: var(--azul); }
-    .fila .pronto { background: var(--verde); }
-
-    .dica { margin-top: 28px; background: var(--papel); border-radius: 14px; padding: 16px 18px; color: var(--suave); font-size: 14px; line-height: 1.5; }
-    .dica b { color: var(--tinta); }
-    .faixa > div { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-  </style>
+  <link rel="stylesheet" href="/marca.css">
+  <link rel="stylesheet" href="/admin.css">
   <link rel="stylesheet" href="/sessao.css">
+  <style>
+    .saudacao { font-size: 34px; font-weight: 800; letter-spacing: -.6px; margin: 0; }
+    .agora { margin: 2px 0 24px; color: var(--forno-suave); font-weight: 600; }
+
+    .numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+    .numero { background: var(--papel); border: 2.5px solid var(--forno); border-radius: 22px; padding: 16px 20px 18px; }
+    .numero span { display: block; font-weight: 700; color: var(--forno-suave); }
+    .numero b { display: block; font-family: var(--fonte-marca); font-weight: 400; font-size: 42px; line-height: 1.05; margin-top: 4px; font-variant-numeric: tabular-nums; }
+    .numero.principal { background: var(--forno); color: var(--gema); box-shadow: 0 6px 0 #1f120a; }
+    .numero.principal span { color: var(--gema-media); }
+
+    h2 { font-size: 22px; font-weight: 800; margin: 34px 0 12px; }
+    .cozinhas { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+    .cozinha {
+      display: block; background: var(--papel); border: 2px solid var(--borda); border-radius: 22px; padding: 18px 20px;
+      color: inherit; text-decoration: none;
+    }
+    .cozinha:hover { border-color: var(--forno); }
+    .cozinha-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .cozinha-topo b { font-family: var(--fonte-marca); font-weight: 400; font-size: 30px; }
+    .cozinha-topo small { color: var(--forno-suave); font-weight: 700; }
+    .barra { display: flex; height: 18px; border-radius: 999px; overflow: hidden; border: 2px solid var(--forno); margin: 14px 0 10px; background: var(--gema-clara); }
+    .barra span { transition: flex-grow .4s; }
+    .barra .fila { background: var(--fila); }
+    .barra .brasa { background: var(--brasa); }
+    .barra .pronto { background: var(--manjericao); }
+    .legenda { display: flex; gap: 16px; flex-wrap: wrap; font-weight: 700; font-size: 15px; }
+    .legenda i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--forno); margin-right: 6px; vertical-align: -1px; }
+    .legenda .fila i { background: var(--fila); }
+    .legenda .brasa i { background: var(--brasa); }
+    .legenda .pronto i { background: var(--manjericao); }
+
+    .atalhos { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+    .atalho {
+      display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: center; padding: 14px 16px;
+      background: var(--papel); border: 2px solid var(--borda); border-radius: 18px; color: inherit; text-decoration: none;
+    }
+    .atalho:hover { border-color: var(--forno); }
+    .atalho .icone { font-size: 26px; text-align: center; }
+    .atalho b { display: block; }
+    .atalho small { color: var(--forno-suave); word-break: break-all; }
+
+    .dica { margin-top: 30px; border: 2px dashed var(--forno); border-radius: 18px; padding: 14px 18px; line-height: 1.5; max-width: 72ch; }
+  </style>
 </head>
 <body>
   <header class="faixa">
-    <div>
-      <div>
-        <small id="subtitulo">Sistema de pedidos</small>
-        <h1 id="loja">Pizzaria</h1>
-      </div>
+    <div class="faixa-conteudo">
+      <a class="logo" href="/painel"><img src="/mascote.svg" alt=""><span class="marca-nome">Frangonete</span></a>
       <div id="sessao"></div>
     </div>
   </header>
 
-  <main>
+  <main class="conteudo">
+    <h1 class="saudacao" id="saudacao">Olá</h1>
+    <p class="agora" id="agora"></p>
+
     <section class="numeros">
+      <div class="numero principal" data-faturamento hidden><span>Faturamento</span><b id="r-faturamento">–</b></div>
       <div class="numero"><span>Pedidos</span><b id="r-pedidos">–</b></div>
-      <div class="numero" data-faturamento hidden><span>Faturamento</span><b id="r-faturamento">–</b></div>
       <div class="numero" data-faturamento hidden><span>Ticket médio</span><b id="r-medio">–</b></div>
       <div class="numero"><span>Cancelados</span><b id="r-cancelados">–</b></div>
     </section>
 
+    <h2>Cozinhas agora</h2>
+    <section id="cozinhas" class="cozinhas"></section>
+
     <h2>Telas</h2>
-    <section id="telas" class="telas"></section>
+    <section id="telas" class="atalhos"></section>
 
     <p class="dica">
-      <b>Para usar no celular:</b> conecte o celular ao mesmo Wi-Fi deste computador e abra o endereço da tela do garçom.
-      No navegador do celular, use “Adicionar à tela inicial” para abrir como aplicativo.
+      <b>Para usar no celular:</b> conecte o celular ao mesmo Wi-Fi deste computador e abra o endereço do app do garçom.
+      No navegador do celular, use "Adicionar à tela inicial" para abrir como aplicativo.
     </p>
   </main>
 
   <script src="/sessao.js"></script>
   <script>
     const $ = (s) => document.querySelector(s);
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
     const brl = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     let info;
 
@@ -86,32 +97,46 @@
       return ip && location.hostname === 'localhost' ? `http://${ip}:${info.porta}` : location.origin;
     }
 
-    function renderTelas(resumo) {
+    function saudar(nome) {
+      const h = new Date().getHours();
+      const periodo = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+      $('#saudacao').textContent = `${periodo}, ${nome.split(' ')[0]}`;
+      $('#agora').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    }
+
+    function renderCozinhas(resumo) {
+      $('#cozinhas').innerHTML = info.cozinhas.filter((c) => Sessao.pode(`cozinha:${c.id}`)).map((c) => {
+        const f = resumo.porCozinha[c.id];
+        const total = f.novo + f.preparo + f.pronto || 1;
+        return `
+          <a class="cozinha" href="/cozinha/${c.id}">
+            <div class="cozinha-topo"><b>${esc(c.setor)}</b><small>${esc(c.nome)}</small></div>
+            <div class="barra" role="img" aria-label="${f.novo} na fila, ${f.preparo} em preparo, ${f.pronto} prontos">
+              <span class="fila" style="flex-grow:${f.novo / total}"></span>
+              <span class="brasa" style="flex-grow:${f.preparo / total}"></span>
+              <span class="pronto" style="flex-grow:${f.pronto / total}"></span>
+            </div>
+            <div class="legenda">
+              <span class="fila"><i></i>${f.novo} na fila</span>
+              <span class="brasa"><i></i>${f.preparo} em preparo</span>
+              <span class="pronto"><i></i>${f.pronto} ${f.pronto === 1 ? 'pronto' : 'prontos'}</span>
+            </div>
+          </a>`;
+      }).join('');
+    }
+
+    function renderTelas() {
       const b = base();
-      // Só as telas que o cargo pode abrir.
-      const cards = [
-        { icone: '📱', titulo: 'Garçom', texto: 'Celular: monta e envia os pedidos.', url: `${b}/`, perm: ['pedido:criar'] },
-        ...info.cozinhas.map((c) => {
-          const f = resumo.porCozinha[c.id];
-          return {
-            icone: c.id === 1 ? '🍕' : '🍝',
-            titulo: `${c.nome} · ${c.setor}`,
-            texto: 'Tela da cozinha com os pedidos em tempo real.',
-            url: `${b}/cozinha/${c.id}`,
-            perm: [`cozinha:${c.id}`],
-            fila: `<span class="novo">${f.novo} na fila</span><span class="preparo">${f.preparo} em preparo</span><span class="pronto">${f.pronto} prontos</span>`,
-          };
-        }),
-        { icone: '🖨️', titulo: 'Impressoras', texto: 'Simulação do que sai em cada impressora.', url: `${b}/impressoras`, perm: ['impressora:1', 'impressora:2'] },
-        { icone: '👥', titulo: 'Usuários', texto: 'Criar e desativar acessos, trocar PINs.', url: `${b}/usuarios`, perm: ['usuarios:todos', 'usuarios:equipe'] },
-      ].filter((c) => Sessao.pode(...c.perm));
-      $('#telas').innerHTML = cards.map((c) => `
-        <a class="tela" href="${c.url}" target="_blank">
-          <span class="icone">${c.icone}</span>
-          <strong>${c.titulo}</strong>
-          <p>${c.texto}</p>
-          ${c.fila ? `<div class="fila">${c.fila}</div>` : ''}
-          <code>${c.url}</code>
+      const telas = [
+        { icone: '📱', titulo: 'App do garçom', url: `${b}/`, perm: ['pedido:criar'] },
+        ...info.cozinhas.map((c) => ({ icone: c.id === 1 ? '🍕' : '🍝', titulo: `${c.setor} (${c.nome})`, url: `${b}/cozinha/${c.id}`, perm: [`cozinha:${c.id}`] })),
+        { icone: '🖨️', titulo: 'Impressoras', url: `${b}/impressoras`, perm: ['impressora:1', 'impressora:2'] },
+        { icone: '👥', titulo: 'Usuários', url: `${b}/usuarios`, perm: ['usuarios:todos', 'usuarios:equipe'] },
+      ].filter((t) => Sessao.pode(...t.perm));
+      $('#telas').innerHTML = telas.map((t) => `
+        <a class="atalho" href="${t.url}" target="_blank">
+          <span class="icone" aria-hidden="true">${t.icone}</span>
+          <span><b>${esc(t.titulo)}</b><small>${esc(t.url)}</small></span>
         </a>`).join('');
     }
 
@@ -125,17 +150,16 @@
           $('#r-faturamento').textContent = brl(r.faturamento);
           $('#r-medio').textContent = brl(r.ticketMedio);
         }
-        renderTelas(r);
+        renderCozinhas(r);
       } catch {}
     }
 
     (async () => {
-      await Sessao.carregar();
+      const u = await Sessao.carregar();
+      saudar(u.nome);
       document.querySelectorAll('[data-faturamento]').forEach((el) => (el.hidden = !Sessao.pode('faturamento')));
       info = await (await Sessao.api('/api/info')).json();
-      $('#loja').textContent = info.loja.nome;
-      $('#subtitulo').textContent = `${info.loja.subtitulo} · Sistema de pedidos`;
-      document.title = `${info.loja.nome} · Painel`;
+      renderTelas();
       await atualizar();
       setInterval(atualizar, 5000);
     })();

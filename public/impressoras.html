@@ -3,24 +3,31 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Impressoras · Simulação</title>
+  <title>Impressoras · Frangonete</title>
   <link rel="icon" href="/icone.svg">
+  <link rel="stylesheet" href="/marca.css">
   <link rel="stylesheet" href="/impressoras.css">
   <link rel="stylesheet" href="/sessao.css">
 </head>
 <body>
   <header class="topo">
-    <div>
-      <a class="voltar" id="voltar" href="/painel.html" hidden>← Painel</a>
-      <h1>Impressoras das cozinhas</h1>
-      <p>Cada pedido aparece aqui exatamente como sai na impressora térmica da cozinha.</p>
-    </div>
-    <div class="topo-acoes">
-      <div id="sessao"></div>
-      <span id="conexao" class="conexao off">desconectado</span>
-      <button id="som" class="botao" aria-pressed="false">🔇 Som desligado</button>
+    <div class="topo-conteudo">
+      <a class="logo" href="/"><img src="/mascote.svg" alt=""><span class="marca-nome">Frangonete</span></a>
+      <div class="topo-acoes"><div id="sessao"></div></div>
     </div>
   </header>
+
+  <div class="cabeca">
+    <div>
+      <a class="voltar" id="voltar" href="/painel.html" hidden>Voltar ao painel</a>
+      <h1>Impressoras das cozinhas</h1>
+      <p>Cada pedido sai aqui exatamente como na impressora térmica da cozinha.</p>
+    </div>
+    <div class="cabeca-acoes">
+      <span id="conexao" class="conexao off">desconectado</span>
+      <button id="som" class="adesivo botao" style="background:var(--papel)" aria-pressed="false">Ligar som</button>
+    </div>
+  </div>
 
   <main id="impressoras" class="impressoras"></main>
 
