@@ -1,30 +1,28 @@
 #!/usr/bin/env bash
-# Publica a versão commitada na VPS, sem mexer em outros serviços do servidor.
+# Publica manualmente a versão commitada na VPS (o mesmo caminho do CI/CD).
+# Normalmente não é preciso: todo push na main já publica pelo GitHub Actions.
 # Uso: ./deploy.sh            (padrão root@187.41.102.56)
 #      VPS=usuario@ip ./deploy.sh
 set -euo pipefail
 
 VPS="${VPS:-root@187.41.102.56}"
-PASTA="/opt/pizzaria"
+HOST="${VPS#*@}"
+COMMIT="$(git rev-parse HEAD)"
 
 if [ -n "$(git status --porcelain)" ]; then
   echo "Há alterações não commitadas; o deploy envia só o que está commitado." >&2
 fi
 
-echo "Enviando $(git rev-parse --short HEAD) para $VPS:$PASTA..."
-git archive --format=tar HEAD | ssh "$VPS" "mkdir -p $PASTA && tar -x -C $PASTA"
+echo "Enviando ${COMMIT:0:7} para $VPS..."
+git archive --format=tar HEAD | ssh "$VPS" /opt/pizzaria-deploy/receber.sh "$COMMIT"
 
-# O prune filtra pela etiqueta do Dockerfile: imagens de outros projetos não são tocadas.
-ssh "$VPS" "cd $PASTA && docker compose up -d --build && docker image prune -f --filter label=app=pizzaria > /dev/null"
-
-HOST="${VPS#*@}"
-echo "Aguardando o servidor responder..."
-for _ in $(seq 1 20); do
-  if curl -fs "http://$HOST:8080/api/info" > /dev/null; then
+echo "Conferindo a versão no ar..."
+for _ in $(seq 1 30); do
+  if curl -fs "http://$HOST:8080/api/info" | grep -q "\"versao\":\"$COMMIT\""; then
     echo "Publicado: http://$HOST:8080/painel"
     exit 0
   fi
-  sleep 1
+  sleep 2
 done
-echo "O servidor não respondeu. Veja os logs: ssh $VPS 'docker logs pizzaria-app'" >&2
+echo "A versão $COMMIT não apareceu no ar. Logs: ssh $VPS 'docker logs pizzaria-app'" >&2
 exit 1

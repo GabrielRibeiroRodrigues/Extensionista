@@ -3,7 +3,9 @@ FROM node:22-alpine
 LABEL app=pizzaria
 
 WORKDIR /app
-ENV NODE_ENV=production \
+ARG VERSAO=dev
+ENV VERSAO=$VERSAO \
+    NODE_ENV=production \
     PORT=3000 \
     ARQUIVO_DADOS=/dados/pedidos.json
 

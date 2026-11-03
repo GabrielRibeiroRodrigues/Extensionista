@@ -81,13 +81,40 @@ O sistema roda em Docker na VPS como um projeto isolado (`pizzaria`), com contai
 - Painel: `http://187.41.102.56:8080/painel`
 - Garçom: `http://187.41.102.56:8080/`
 
-Para publicar uma nova versão, commite e rode (no Git Bash):
+### CI/CD (GitHub Actions)
+
+O workflow `.github/workflows/ci-cd.yml` faz o seguinte:
+
+- **Push ou pull request para a `main`:** roda os testes, builda a imagem Docker e confere se o container sobe.
+- **Push na `main` com tudo verde:** publica na VPS e confere se `/api/info` responde com o commit novo (`versao`). Se não responder, o job falha.
+
+Deploys não rodam em paralelo: um push novo espera o anterior terminar. Também dá para disparar manualmente na aba *Actions* (*Run workflow*).
+
+Configuração no GitHub (*Settings → Secrets and variables → Actions*):
+
+| Nome | Tipo | Conteúdo |
+|------|------|----------|
+| `VPS_SSH_KEY` | secret | chave privada exclusiva do deploy |
+| `VPS_KNOWN_HOSTS` | secret | impressão digital SSH da VPS (protege contra servidor falso) |
+| `VPS_HOST` | variável | IP da VPS |
+
+Na VPS, essa chave está no `authorized_keys` do root com `command="/opt/pizzaria-deploy/receber.sh",restrict`. Ela só consegue executar esse script, que recebe o código e atualiza o container `pizzaria-app`. Não abre terminal, não faz túnel e não roda outros comandos. Se `deploy/receber.sh` mudar no repositório, reinstale o script na VPS:
+
+```bash
+ssh root@187.41.102.56 "cat > /opt/pizzaria-deploy/receber.sh" < deploy/receber.sh
+```
+
+Para trocar a chave: gere outra (`ssh-keygen -t ed25519 -C github-actions-pizzaria`), substitua a linha `github-actions-pizzaria` no `authorized_keys` da VPS e atualize o secret `VPS_SSH_KEY`.
+
+### Deploy manual
+
+Sem passar pelo GitHub, com a sua própria chave SSH (no Git Bash):
 
 ```bash
 ./deploy.sh
 ```
 
-O script envia por SSH a versão commitada para `/opt/pizzaria`, reconstrói só o container `pizzaria-app` e confere se ele respondeu. Os pedidos ficam no volume `pizzaria_dados` e são mantidos entre deploys.
+O deploy manual usa o mesmo script receptor da VPS. Os pedidos ficam no volume `pizzaria_dados` e são mantidos entre deploys.
 
 Comandos úteis na VPS:
 

@@ -11,6 +11,7 @@ const { popularExemplos } = require('./src/seed');
 const { ligarPersistencia } = require('./src/persistencia');
 
 const PORTA = Number(process.env.PORT) || 3000;
+const VERSAO = process.env.VERSAO || 'dev'; // commit publicado; o deploy confere por aqui
 const PUBLICO = path.join(__dirname, 'public');
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -181,7 +182,7 @@ async function rotear(req, res) {
   // Cardápio e informações
   if (get && p === '/api/menu') return json(res, 200, cardapioPublico());
   if (get && p === '/api/info') {
-    return json(res, 200, { loja, porta: PORTA, enderecos: enderecosLocais(), cozinhas: Object.values(cozinhas) });
+    return json(res, 200, { loja, versao: VERSAO, porta: PORTA, enderecos: enderecosLocais(), cozinhas: Object.values(cozinhas) });
   }
 
   if (get && p === '/api/resumo') return json(res, 200, store.resumo());

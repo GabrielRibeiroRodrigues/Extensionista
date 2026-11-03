@@ -1,0 +1,90 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    name: Testes e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Testes
+        run: npm test
+
+      - name: Build da imagem Docker
+        run: docker build --build-arg VERSAO=${{ github.sha }} -t pizzaria/app:ci .
+
+      - name: Container sobe e responde
+        run: |
+          docker run -d --name pizzaria-ci -p 3000:3000 pizzaria/app:ci
+          for i in $(seq 1 20); do
+            if curl -fs http://127.0.0.1:3000/api/info | grep -q '"versao":"${{ github.sha }}"'; then
+              echo "OK"; exit 0
+            fi
+            sleep 1
+          done
+          docker logs pizzaria-ci
+          exit 1
+
+  deploy:
+    name: Deploy na VPS
+    needs: testes
+    # Só publica a partir da main (nunca em pull request).
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: producao
+      url: http://${{ vars.VPS_HOST }}:8080/painel
+    # Um deploy por vez; um push novo espera o anterior terminar.
+    concurrency:
+      group: deploy-producao
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Chave SSH do deploy
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Enviar e publicar
+        run: |
+          git archive --format=tar HEAD \
+            | ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+                "root@${{ vars.VPS_HOST }}" "${{ github.sha }}"
+
+      - name: Conferir a versão no ar
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fs "http://${{ vars.VPS_HOST }}:8080/api/info" | grep -q '"versao":"${{ github.sha }}"'; then
+              echo "Versão ${{ github.sha }} no ar."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "A versão publicada não respondeu a tempo." >&2
+          exit 1
+
+      - name: Apagar a chave
+        if: always()
+        run: rm -f ~/.ssh/deploy

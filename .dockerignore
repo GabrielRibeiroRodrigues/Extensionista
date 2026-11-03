@@ -1,6 +1,9 @@
 .git
+.github
 node_modules
 dados
 impressoes
 test
+deploy
+deploy.sh
 *.md
