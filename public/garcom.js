@@ -379,7 +379,7 @@ function conectarTempoReal() {
     const anterior = pedido.tickets.find((t) => t.id === ticket.id);
     pedido.tickets = pedido.tickets.map((t) => (t.id === ticket.id ? ticket : t));
     if (anterior && anterior.status !== 'pronto' && ticket.status === 'pronto') {
-      avisar(`${ticket.rotulo}: ${ticket.cozinhaNome.split(' - ')[1]} pronto!`, 'ok');
+      avisar(`${ticket.rotulo}: ${ticket.cozinhaNome.split(' - ')[1].toLowerCase()} prontas para servir`, 'ok');
       if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
       if ($('#pedidos').hidden) estado.prontosNaoVistos++;
     }

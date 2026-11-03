@@ -14,6 +14,9 @@ services:
     ports:
       - "${PORTA_PUBLICA:-8080}:3000"
     environment:
+      # Modo demonstração ligado para a apresentação: entrada em 1 toque nos perfis
+      # de exemplo. Troque para "0" (e dê push) antes de usar de verdade.
+      DEMO: ${DEMO:-1}
       # Impressoras de rede só funcionam se o servidor alcançar a rede da pizzaria.
       IMPRESSORA_COZINHA_1: ${IMPRESSORA_COZINHA_1:-}
       IMPRESSORA_COZINHA_2: ${IMPRESSORA_COZINHA_2:-}

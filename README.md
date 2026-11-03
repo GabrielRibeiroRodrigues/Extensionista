@@ -33,6 +33,31 @@ npm start
 
 O celular precisa estar no mesmo Wi-Fi do computador que roda o servidor. Se o Windows perguntar sobre o firewall, permita o Node.js em redes privadas.
 
+## Modo demonstração
+
+Para apresentar com dados mockados:
+
+```bash
+DEMO=1 npm start
+```
+
+- A tela de login mostra seis perfis para **entrar com um toque**:
+
+  | Perfil | Cargo | Abre em | Entra também com |
+  |---|---|---|---|
+  | Rosângela Prado | Dono | Painel | `dono` / senha `frangonete` |
+  | Carla Mendes | Gerente | Painel | `carla` / senha `gerente123` |
+  | Ana Souza | Garçom | App de pedidos | `ana` / PIN `1111` |
+  | Bruno Lima | Garçom | App de pedidos | `bruno` / PIN `2222` |
+  | Zé do Forno | Cozinha 1 | Pizzas | `ze` / PIN `3333` |
+  | Lu das Massas | Cozinha 2 | Massas | `lu` / PIN `4444` |
+
+- Os pedidos de exemplo aparecem em todas as etapas (na fila, em preparo, pronto), com horários variados e um pedido atrasado, para mostrar o alerta.
+- Antes de apresentar, dono ou gerente pode usar **Restaurar pedidos de exemplo** no menu do crachá. Os exemplos voltam com horários a partir de agora, e as telas abertas recarregam sozinhas.
+- Para trocar de pessoa, use **Trocar de perfil** no menu do crachá.
+
+**Não use em produção:** com o modo ligado, qualquer pessoa que abrir o endereço entra como qualquer perfil, inclusive o dono. Ao ligar, a senha do usuário `dono` volta a ser `frangonete`. Na VPS ele vem ligado pelo `docker-compose.yml` (`DEMO: ${DEMO:-1}`). Para desligar, troque para `0` e dê push.
+
 ## Cargos e acesso
 
 | | Dono | Gerente | Garçom | Cozinha 1 | Cozinha 2 |
@@ -198,6 +223,7 @@ src/impressora.js    layout do ticket, ESC/POS e envio para a impressora
 src/persistencia.js  salvar/carregar os pedidos em disco
 src/auth.js          cargos, permissões, login (senha/PIN) e sessões
 public/              telas: login, garçom, cozinha, impressoras, painel, usuários e conta
+public/marca.css     identidade Frangonete (cores, fontes, botão adesivo); mascote.svg e fontes/
 test/                testes (npm test)
 ```
 
