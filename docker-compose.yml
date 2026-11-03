@@ -1,0 +1,25 @@
+# Projeto isolado ("pizzaria"): containers, rede e volume próprios.
+# Não usa as portas 80/443 para conviver com outros serviços do servidor.
+name: pizzaria
+
+services:
+  app:
+    build: .
+    image: pizzaria/app:latest
+    container_name: pizzaria-app
+    restart: unless-stopped
+    ports:
+      - "${PORTA_PUBLICA:-8080}:3000"
+    environment:
+      # Impressoras de rede só funcionam se o servidor alcançar a rede da pizzaria.
+      IMPRESSORA_COZINHA_1: ${IMPRESSORA_COZINHA_1:-}
+      IMPRESSORA_COZINHA_2: ${IMPRESSORA_COZINHA_2:-}
+    volumes:
+      - dados:/dados
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+volumes:
+  dados:
