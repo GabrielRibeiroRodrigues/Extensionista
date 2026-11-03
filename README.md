@@ -19,17 +19,44 @@ Requer Node.js 18 ou superior. Não há dependências para instalar.
 npm start
 ```
 
-Abra o **painel** em `http://localhost:3000/painel`. Ele mostra o resumo do movimento e os links de todas as telas, já com o IP do Wi-Fi para abrir no celular.
+**Primeiro acesso:** o terminal mostra o usuário `dono` e uma **senha temporária**. Entre em `http://localhost:3000/login`, aba *Dono · Gerente*, e defina uma senha nova (obrigatório). Depois, em **Usuários**, crie a equipe.
 
 | Tela | Endereço | Onde usar |
 |------|----------|-----------|
+| Entrar | `http://IP:3000/login` | Qualquer aparelho; cada um cai na sua tela |
 | Garçom | `http://IP:3000/` | Celular. Dá para "Adicionar à tela inicial" |
 | Cozinha 1 · Pizzas | `http://IP:3000/cozinha/1` | TV ou monitor da cozinha |
 | Cozinha 2 · Massas | `http://IP:3000/cozinha/2` | TV ou monitor da cozinha |
 | Impressoras | `http://IP:3000/impressoras` | Simulação das impressoras térmicas |
-| Painel | `http://IP:3000/painel` | Gerente / caixa |
+| Painel | `http://IP:3000/painel` | Dono e gerente |
+| Usuários | `http://IP:3000/usuarios` | Dono e gerente |
 
 O celular precisa estar no mesmo Wi-Fi do computador que roda o servidor. Se o Windows perguntar sobre o firewall, permita o Node.js em redes privadas.
+
+## Cargos e acesso
+
+| | Dono | Gerente | Garçom | Cozinha 1 | Cozinha 2 |
+|---|:-:|:-:|:-:|:-:|:-:|
+| Entra com | senha | senha | PIN | PIN | PIN |
+| Fazer pedidos | ✓ | ✓ | ✓ | – | – |
+| Acompanhar pedidos | todos | todos | só os seus | – | – |
+| Cancelar pedido | qualquer | qualquer | os seus, antes de a cozinha começar | – | – |
+| Tela Cozinha 1 | ✓ | ✓ | – | ✓ | – |
+| Tela Cozinha 2 | ✓ | ✓ | – | – | ✓ |
+| Impressoras | as 2 | as 2 | – | a 1 | a 2 |
+| Painel | ✓ | ✓ | – | – | – |
+| Faturamento e ticket médio | ✓ | – | – | – | – |
+| Gerenciar usuários | todos (menos outro dono) | garçons e cozinhas | – | – | – |
+
+- **As permissões valem no servidor**, em cada rota da API, em cada página e no tempo real. Esconder um botão é só conforto: um garçom não recebe nem pela conexão ao vivo os pedidos dos colegas, e a Cozinha 1 não recebe nada da Cozinha 2.
+- **PIN** de 4 números para garçom e cozinhas. O aparelho lembra o usuário, e a sessão dura 30 dias, renovada com o uso. A TV da cozinha não precisa logar de novo.
+- **Bloqueio:** 5 erros seguidos travam o usuário por 15 minutos, e 20 erros vindos do mesmo aparelho travam o aparelho por 15 minutos.
+- **Senhas e PINs** são guardados só como hash (scrypt), e as sessões só como hash do token. Tudo fica em `dados/usuarios.json`.
+- **Desativar** um usuário, trocar o PIN dele ou mudar o cargo derruba na hora as telas abertas por ele.
+- O pedido registra **o garçom logado**. Não dá para fazer pedido em nome de outro.
+- Cada pessoa troca a própria senha ou PIN em **Minha conta**, no menu do crachá.
+
+**Esqueceu a senha do dono?** Com o servidor parado, apague `dados/usuarios.json` e inicie de novo. Um dono novo é criado com outra senha temporária, mas os demais usuários também são apagados. Na VPS: `docker exec pizzaria-app rm /dados/usuarios.json && docker restart pizzaria-app` e depois `docker logs pizzaria-app`.
 
 ## Funcionalidades
 
@@ -124,7 +151,7 @@ docker restart pizzaria-app                                   # reiniciar
 docker exec pizzaria-app rm /dados/pedidos.json && docker restart pizzaria-app   # zerar os pedidos
 ```
 
-Na VPS, as impressoras de rede da pizzaria não são alcançáveis, porque estão na rede local dela. Lá a impressão fica no modo simulado (tela `/impressoras`) ou usa a opção "Imprimir neste PC" na tela da cozinha. O sistema não tem login: qualquer pessoa com o endereço consegue usá-lo.
+Na VPS, as impressoras de rede da pizzaria não são alcançáveis, porque estão na rede local dela. Lá a impressão fica no modo simulado (tela `/impressoras`) ou usa a opção "Imprimir neste PC" na tela da cozinha.
 
 ## Configuração
 
@@ -151,7 +178,13 @@ Para começar um dia do zero, apague a pasta `dados/` com o servidor parado.
 | GET    | `/api/impressoras` | Estado e histórico das impressoras |
 | POST   | `/api/impressoras/:id/teste` | Imprime a página de teste |
 | GET    | `/api/resumo` | Pedidos, faturamento e fila por cozinha |
-| GET    | `/api/info` | Nome da loja, porta e IPs da rede |
+| GET    | `/api/info` | Público: loja e versão. Logado: também porta e IPs da rede |
+| POST   | `/api/entrar` | `{ usuario, segredo }` (senha ou PIN); grava o cookie de sessão |
+| POST   | `/api/sair` | Encerra a sessão |
+| GET    | `/api/eu` | Usuário logado e permissões |
+| POST   | `/api/eu/segredo` | `{ atual, novo }` troca a própria senha/PIN |
+| GET/POST | `/api/usuarios` | Lista e cria usuários (dono e gerente) |
+| PATCH  | `/api/usuarios/:id` | `{ nome, cargo, segredo, ativo }` |
 
 Tempo real via Server-Sent Events: `/api/cozinhas/:id/stream`, `/api/garcom/stream` e `/api/impressoras/stream`.
 
@@ -163,7 +196,8 @@ src/menu.js          cardápio mockado, tamanhos e cozinha de cada categoria
 src/store.js         pedidos, divisão por cozinha, status e cancelamento
 src/impressora.js    layout do ticket, ESC/POS e envio para a impressora
 src/persistencia.js  salvar/carregar os pedidos em disco
-public/              telas: garçom, cozinha, impressoras e painel
+src/auth.js          cargos, permissões, login (senha/PIN) e sessões
+public/              telas: login, garçom, cozinha, impressoras, painel, usuários e conta
 test/                testes (npm test)
 ```
 
@@ -175,6 +209,6 @@ npm test
 
 ## Limitações
 
-- Não há login: qualquer pessoa na rede pode abrir as telas.
+- **Na VPS o acesso é por HTTP, sem HTTPS** (não há domínio). Senhas, PINs e o cookie de sessão viajam sem criptografia: alguém na mesma rede Wi-Fi pública conseguiria capturá-los. Com um domínio apontando para a VPS, dá para colocar HTTPS e usar `COOKIE_SEGURO=1`.
 - Não há pagamento nem fechamento de conta.
 - Os acentos são removidos no papel, porque muitas impressoras térmicas não imprimem acentos corretamente.
