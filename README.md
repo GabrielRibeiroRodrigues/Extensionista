@@ -1,4 +1,4 @@
-# Bella Massa – Pedidos para as cozinhas
+# Frangonete – Pedidos para as cozinhas
 
 O garçom faz o pedido no celular. O sistema separa os itens por cozinha, mostra cada parte na tela da cozinha certa e imprime na impressora dela.
 

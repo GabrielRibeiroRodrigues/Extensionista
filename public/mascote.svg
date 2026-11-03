@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Frangonete">
+  <!-- crista -->
+  <g fill="#D93A1F" stroke="#3A2112" stroke-width="2.2">
+    <circle cx="23.5" cy="13" r="5"/>
+    <circle cx="32" cy="9.5" r="6"/>
+    <circle cx="40.5" cy="13" r="5"/>
+  </g>
+  <!-- fatia (queijo) -->
+  <path d="M12 21 H52 L32 59 Z" fill="#FFC72C" stroke="#3A2112" stroke-width="2.6" stroke-linejoin="round"/>
+  <!-- borda -->
+  <rect x="9" y="14.5" width="46" height="10" rx="5" fill="#E8A33D" stroke="#3A2112" stroke-width="2.6"/>
+  <!-- olhos -->
+  <circle cx="26" cy="31" r="3.3" fill="#3A2112"/>
+  <circle cx="38" cy="31" r="3.3" fill="#3A2112"/>
+  <circle cx="27.1" cy="29.9" r="1" fill="#fff"/>
+  <circle cx="39.1" cy="29.9" r="1" fill="#fff"/>
+  <!-- bico -->
+  <path d="M28.5 36 H35.5 L32 41.5 Z" fill="#E8711A" stroke="#3A2112" stroke-width="1.8" stroke-linejoin="round"/>
+  <!-- calabresa -->
+  <circle cx="32" cy="49" r="3" fill="#D93A1F"/>
+</svg>

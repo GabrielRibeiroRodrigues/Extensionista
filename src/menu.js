@@ -1,7 +1,7 @@
 // Dados mockados do cardápio. Cada categoria aponta para a cozinha que prepara.
 // cozinha: null => item não vai para cozinha (servido no balcão/bar).
 
-const loja = { nome: 'Bella Massa', subtitulo: 'Pizzaria & Cantina' };
+const loja = { nome: 'Frangonete', subtitulo: 'Pizzas e massas' };
 
 const cozinhas = {
   1: { id: 1, nome: 'Cozinha 1', setor: 'Pizzas' },
@@ -22,7 +22,10 @@ const categorias = [
   { id: 'bebidas', nome: 'Bebidas', cozinha: null },
 ];
 
+// destaque: aparece com o selo "da casa" no app do garçom.
 const produtos = [
+  { id: 'p7', categoria: 'pizzas', nome: 'Frangonete', descricao: 'Frango desfiado, catupiry, milho e bacon crocante', preco: 59.9, destaque: true },
+  { id: 'p8', categoria: 'pizzas', nome: 'Frango Barbecue', descricao: 'Frango, molho barbecue, cebola roxa e cheddar', preco: 55.9 },
   { id: 'p1', categoria: 'pizzas', nome: 'Margherita', descricao: 'Molho, mussarela, tomate e manjericão', preco: 49.9 },
   { id: 'p2', categoria: 'pizzas', nome: 'Calabresa', descricao: 'Calabresa, cebola e azeitona', preco: 47.9 },
   { id: 'p3', categoria: 'pizzas', nome: 'Portuguesa', descricao: 'Presunto, ovo, cebola, ervilha e mussarela', preco: 54.9 },
@@ -36,6 +39,7 @@ const produtos = [
   { id: 'm3', categoria: 'massas', nome: 'Lasanha da Casa', descricao: 'Carne, presunto, queijo e molho branco', preco: 45.9 },
   { id: 'm4', categoria: 'massas', nome: 'Nhoque ao Sugo', descricao: 'Nhoque de batata com molho de tomate', preco: 36.9 },
   { id: 'm5', categoria: 'massas', nome: 'Penne ao Pesto', descricao: 'Pesto de manjericão e castanhas', preco: 38.9 },
+  { id: 'm6', categoria: 'massas', nome: 'Nhoque de Frango', descricao: 'Nhoque de batata com frango ao molho branco', preco: 41.9, destaque: true },
   { id: 'b1', categoria: 'bebidas', nome: 'Refrigerante Lata', descricao: '350 ml', preco: 6.5 },
   { id: 'b2', categoria: 'bebidas', nome: 'Suco Natural', descricao: 'Laranja, limão ou abacaxi', preco: 9.9 },
   { id: 'b3', categoria: 'bebidas', nome: 'Água Mineral', descricao: '500 ml', preco: 4.5 },

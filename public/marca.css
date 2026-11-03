@@ -1,0 +1,54 @@
+/* Identidade Frangonete: fontes, cores e o botão "adesivo" de letreiro.
+   Carregado antes do CSS de cada tela. */
+
+@font-face {
+  font-family: "Lilita One";
+  src: url("/fontes/lilita-one.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/fontes/bricolage-grotesque.woff2") format("woff2");
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+:root {
+  /* Base */
+  --gema: #ffc72c;        /* marca */
+  --gema-clara: #fff6d6;  /* fundo das telas claras */
+  --gema-media: #ffe7a1;  /* realces suaves, bordas */
+  --forno: #3a2112;       /* texto e contornos (no lugar do preto) */
+  --forno-suave: #7c5a40; /* texto secundário */
+  --borda: #f0dfa6;
+  --papel: #ffffff;
+  /* Estados do pedido: fila -> brasa -> pronto */
+  --fila: #ffc72c;
+  --brasa: #e8711a;
+  --manjericao: #2e8540;
+  --tomate: #d93a1f;      /* só alertas, erros e cancelamento */
+
+  --fonte-marca: "Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --fonte: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Botão de letreiro: contorno forno e sombra sólida que "afunda" ao tocar. */
+.adesivo {
+  font-family: var(--fonte); font-weight: 800; color: var(--forno); cursor: pointer;
+  background: var(--gema); border: 2.5px solid var(--forno); border-radius: 999px;
+  box-shadow: 0 4px 0 var(--forno); transition: transform .08s, box-shadow .08s;
+}
+.adesivo:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--forno); }
+.adesivo:disabled { opacity: .6; cursor: default; transform: none; box-shadow: 0 4px 0 var(--forno); }
+.adesivo.escuro { background: var(--forno); color: var(--gema); border-color: var(--forno); box-shadow: 0 4px 0 #1f120a; }
+.adesivo.perigo { background: var(--tomate); color: #fff; }
+.adesivo.verde { background: var(--manjericao); color: #fff; }
+
+.marca-nome { font-family: var(--fonte-marca); font-weight: 400; letter-spacing: .3px; line-height: 1; }
+
+:focus-visible { outline: 3px solid var(--forno); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
