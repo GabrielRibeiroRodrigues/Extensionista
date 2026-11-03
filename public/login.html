@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#b3261e">
+  <title>Entrar</title>
+  <link rel="icon" href="/icone.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+  <main class="login">
+    <div class="cartao">
+      <div class="login-marca">
+        <img class="logo" src="/icone.svg" alt="">
+        <h1 id="loja">Pizzaria</h1>
+        <p>Entre para continuar</p>
+      </div>
+
+      <div class="modos" role="tablist">
+        <button data-modo="pin" class="ativo" role="tab">Garçom · Cozinha</button>
+        <button data-modo="senha" role="tab">Dono · Gerente</button>
+      </div>
+
+      <div id="erro" class="erro" role="alert" hidden></div>
+
+      <!-- PIN -->
+      <form id="form-pin" autocomplete="off">
+        <label class="campo">Usuário
+          <input id="usuario-pin" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="ex.: ana" required>
+        </label>
+        <div class="campo" style="margin-bottom:6px">PIN</div>
+        <div id="pontos" class="pontos" aria-live="polite"><span></span><span></span><span></span><span></span></div>
+        <div class="teclado" id="teclado">
+          <button type="button" data-tecla="1">1</button><button type="button" data-tecla="2">2</button><button type="button" data-tecla="3">3</button>
+          <button type="button" data-tecla="4">4</button><button type="button" data-tecla="5">5</button><button type="button" data-tecla="6">6</button>
+          <button type="button" data-tecla="7">7</button><button type="button" data-tecla="8">8</button><button type="button" data-tecla="9">9</button>
+          <button type="button" class="tecla-acao" data-tecla="limpar">Limpar</button><button type="button" data-tecla="0">0</button><button type="button" class="tecla-acao" data-tecla="apagar" aria-label="Apagar">⌫</button>
+        </div>
+      </form>
+
+      <!-- Senha -->
+      <form id="form-senha" hidden>
+        <label class="campo">Usuário
+          <input id="usuario-senha" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+        </label>
+        <label class="campo">Senha
+          <input id="senha" name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <button class="botao largo" type="submit">Entrar</button>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const params = new URLSearchParams(location.search);
+    let modo = 'pin';
+    let pin = '';
+    let enviando = false;
+
+    function lembrar(chave, valor) { try { localStorage.setItem(chave, valor); } catch {} }
+    function lembrado(chave) { try { return localStorage.getItem(chave) || ''; } catch { return ''; } }
+
+    // Só aceita voltar para uma página deste mesmo site.
+    function destino(usuario) {
+      if (usuario.trocarSegredo) return '/conta.html?primeiro=1';
+      const volta = params.get('volta');
+      return volta && volta.startsWith('/') && !volta.startsWith('//') ? volta : usuario.inicio;
+    }
+
+    function mostrarErro(texto) {
+      $('#erro').textContent = texto;
+      $('#erro').hidden = !texto;
+    }
+
+    function trocarModo(novo) {
+      modo = novo;
+      document.querySelectorAll('[data-modo]').forEach((b) => b.classList.toggle('ativo', b.dataset.modo === novo));
+      $('#form-pin').hidden = novo !== 'pin';
+      $('#form-senha').hidden = novo !== 'senha';
+      mostrarErro('');
+      lembrar('login-modo', novo);
+      (novo === 'pin' ? $('#usuario-pin') : $('#usuario-senha')).focus();
+    }
+
+    function desenharPontos() {
+      document.querySelectorAll('#pontos span').forEach((s, i) => s.classList.toggle('cheio', i < pin.length));
+    }
+
+    async function entrar(usuario, segredo) {
+      if (enviando) return false;
+      enviando = true;
+      mostrarErro('');
+      try {
+        const res = await fetch('/api/entrar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario, segredo }),
+        });
+        const dados = await res.json();
+        if (!res.ok) throw new Error(dados.erro || 'Não foi possível entrar.');
+        lembrar(`login-usuario-${modo}`, usuario);
+        location.href = destino(dados.usuario);
+        return true;
+      } catch (err) {
+        mostrarErro(err.message === 'Failed to fetch' ? 'Sem conexão com o servidor.' : err.message);
+        return false;
+      } finally {
+        enviando = false;
+      }
+    }
+
+    async function teclar(tecla) {
+      if (tecla === 'limpar') pin = '';
+      else if (tecla === 'apagar') pin = pin.slice(0, -1);
+      else if (pin.length < 4) pin += tecla;
+      desenharPontos();
+      if (pin.length === 4) {
+        const usuario = $('#usuario-pin').value.trim();
+        if (!usuario) {
+          mostrarErro('Informe o seu usuário.');
+          $('#usuario-pin').focus();
+          return;
+        }
+        const ok = await entrar(usuario, pin);
+        if (!ok) {
+          $('#pontos').classList.add('tremer');
+          setTimeout(() => $('#pontos').classList.remove('tremer'), 400);
+          pin = '';
+          desenharPontos();
+        }
+      }
+    }
+
+    document.querySelectorAll('[data-modo]').forEach((b) => b.addEventListener('click', () => trocarModo(b.dataset.modo)));
+    $('#teclado').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-tecla]');
+      if (b) teclar(b.dataset.tecla);
+    });
+    // Teclado físico também funciona (útil no PC da cozinha).
+    document.addEventListener('keydown', (e) => {
+      if (modo !== 'pin' || e.target.id === 'usuario-pin') {
+        if (modo === 'pin' && e.key === 'Enter') { e.preventDefault(); document.activeElement.blur(); }
+        return;
+      }
+      if (/^\d$/.test(e.key)) teclar(e.key);
+      else if (e.key === 'Backspace') teclar('apagar');
+    });
+    $('#form-pin').addEventListener('submit', (e) => e.preventDefault());
+    $('#form-senha').addEventListener('submit', (e) => {
+      e.preventDefault();
+      entrar($('#usuario-senha').value.trim(), $('#senha').value);
+    });
+
+    (async () => {
+      // Já logado? Vai direto para a tela dele.
+      const eu = await fetch('/api/eu').catch(() => null);
+      if (eu && eu.ok) return (location.href = destino(await eu.json()));
+      const info = await fetch('/api/info').then((r) => r.json()).catch(() => null);
+      if (info) {
+        $('#loja').textContent = info.loja.nome;
+        document.title = `Entrar · ${info.loja.nome}`;
+      }
+      $('#usuario-pin').value = lembrado('login-usuario-pin');
+      $('#usuario-senha').value = lembrado('login-usuario-senha');
+      trocarModo(lembrado('login-modo') || 'pin');
+      if (modo === 'pin' && $('#usuario-pin').value) $('#usuario-pin').blur();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#b3261e">
+  <title>Minha conta</title>
+  <link rel="icon" href="/icone.svg">
+  <link rel="stylesheet" href="/admin.css">
+  <link rel="stylesheet" href="/sessao.css">
+</head>
+<body>
+  <header class="faixa">
+    <div class="faixa-conteudo">
+      <div><small id="loja">Pizzaria</small><h1>Minha conta</h1></div>
+      <div id="sessao"></div>
+    </div>
+  </header>
+
+  <main class="conteudo" style="max-width:480px">
+    <div id="primeiro" class="destaque" hidden>
+      <b>Primeiro acesso.</b> Defina uma senha nova para começar a usar o sistema. A senha temporária deixa de valer.
+    </div>
+
+    <section class="cartao">
+      <p style="margin:0 0 18px">
+        <b id="nome"></b><br>
+        <small style="color:var(--suave)">Usuário <b id="login"></b> · <span id="cargo"></span></small>
+      </p>
+
+      <form id="form">
+        <div id="erro" class="erro" role="alert" hidden></div>
+        <div id="sucesso" class="ok" role="status" hidden></div>
+        <label class="campo"><span id="r-atual">Senha atual</span>
+          <input id="atual" type="password" autocomplete="current-password" required>
+        </label>
+        <label class="campo"><span id="r-novo">Nova senha</span>
+          <input id="novo" type="password" autocomplete="new-password" required>
+          <small id="dica"></small>
+        </label>
+        <label class="campo"><span id="r-confirmar">Repita a nova senha</span>
+          <input id="confirmar" type="password" autocomplete="new-password" required>
+        </label>
+        <button class="botao largo" type="submit">Salvar</button>
+      </form>
+    </section>
+    <p style="text-align:center"><a id="voltar" href="/" style="color:var(--suave)">Voltar</a></p>
+  </main>
+
+  <script src="/sessao.js"></script>
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const primeiro = new URLSearchParams(location.search).has('primeiro');
+
+    (async () => {
+      const u = await Sessao.carregar();
+      const ehPin = u.login === 'pin';
+      $('#nome').textContent = u.nome;
+      $('#login').textContent = u.usuario;
+      $('#cargo').textContent = u.cargoNome;
+      $('#voltar').href = u.inicio;
+      $('#primeiro').hidden = !(primeiro || u.trocarSegredo);
+      $('#voltar').hidden = u.trocarSegredo;
+      $('#r-atual').textContent = u.trocarSegredo ? 'Senha temporária' : ehPin ? 'PIN atual' : 'Senha atual';
+      $('#r-novo').textContent = ehPin ? 'Novo PIN' : 'Nova senha';
+      $('#r-confirmar').textContent = ehPin ? 'Repita o novo PIN' : 'Repita a nova senha';
+      $('#dica').textContent = ehPin ? 'Exatamente 4 números.' : 'Pelo menos 8 caracteres.';
+      if (ehPin) {
+        for (const id of ['#atual', '#novo', '#confirmar']) {
+          $(id).inputMode = 'numeric';
+          $(id).maxLength = 4;
+          $(id).pattern = '\\d{4}';
+        }
+      }
+      const loja = await fetch('/api/info').then((r) => r.json()).catch(() => null);
+      if (loja) $('#loja').textContent = loja.loja.nome;
+
+      $('#form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        $('#erro').hidden = true;
+        $('#sucesso').hidden = true;
+        if ($('#novo').value !== $('#confirmar').value) {
+          $('#erro').textContent = 'A confirmação não confere. Digite de novo.';
+          $('#erro').hidden = false;
+          return;
+        }
+        const res = await Sessao.api('/api/eu/segredo', {
+          method: 'POST',
+          body: JSON.stringify({ atual: $('#atual').value, novo: $('#novo').value }),
+        });
+        const dados = await res.json();
+        if (!res.ok) {
+          $('#erro').textContent = dados.erro;
+          $('#erro').hidden = false;
+          return;
+        }
+        $('#form').reset();
+        if (u.trocarSegredo) return (location.href = dados.inicio);
+        $('#sucesso').textContent = ehPin ? 'PIN alterado com sucesso.' : 'Senha alterada com sucesso.';
+        $('#sucesso').hidden = false;
+      });
+    })();
+  </script>
+</body>
+</html>

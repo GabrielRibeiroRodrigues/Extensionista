@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#b3261e">
+  <title>Usuários</title>
+  <link rel="icon" href="/icone.svg">
+  <link rel="stylesheet" href="/admin.css">
+  <link rel="stylesheet" href="/sessao.css">
+</head>
+<body>
+  <header class="faixa">
+    <div class="faixa-conteudo">
+      <div><small id="loja">Pizzaria</small><h1>Usuários</h1></div>
+      <div id="sessao"></div>
+    </div>
+  </header>
+
+  <main class="conteudo">
+    <div class="barra-acoes">
+      <h2 id="titulo-lista">Equipe</h2>
+      <button id="novo" class="botao">+ Novo usuário</button>
+    </div>
+    <div id="lista" class="lista-usuarios"></div>
+  </main>
+
+  <dialog id="dialogo" class="dialogo">
+    <form id="form" method="dialog" autocomplete="off">
+      <h3 id="d-titulo">Novo usuário</h3>
+      <div id="d-erro" class="erro" role="alert" hidden></div>
+      <label class="campo">Nome
+        <input id="d-nome" maxlength="40" required placeholder="Como aparece nos pedidos">
+      </label>
+      <label class="campo" id="campo-usuario">Usuário (login)
+        <input id="d-usuario" maxlength="30" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="ex.: ana" required>
+        <small>Letras minúsculas, números, ponto, hífen ou _.</small>
+      </label>
+      <label class="campo">Cargo
+        <select id="d-cargo"></select>
+      </label>
+      <label class="campo"><span id="d-rotulo-segredo">PIN</span>
+        <input id="d-segredo" autocomplete="new-password">
+        <small id="d-dica-segredo"></small>
+      </label>
+      <label class="interruptor-linha" id="campo-ativo">
+        <span>Ativo <small style="display:block;font-weight:500;color:var(--suave)">Desativar desconecta na hora</small></span>
+        <input id="d-ativo" type="checkbox">
+      </label>
+      <div class="dialogo-acoes">
+        <button type="button" class="botao sec" id="d-cancelar">Cancelar</button>
+        <button type="submit" class="botao" id="d-salvar">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/sessao.js"></script>
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    const ORDEM = ['dono', 'gerente', 'garcom', 'cozinha1', 'cozinha2'];
+    const GRUPO = { dono: 'Direção', gerente: 'Direção', garcom: 'Salão', cozinha1: 'Cozinhas', cozinha2: 'Cozinhas' };
+    let usuarios = [];
+    let cargos = [];
+    let editando = null; // usuário em edição, ou null para novo
+    let eu;
+
+    function quando(iso) {
+      if (!iso) return 'nunca entrou';
+      const d = new Date(iso);
+      const hoje = new Date().toDateString() === d.toDateString();
+      return `último acesso ${hoje ? 'hoje' : d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    }
+
+    function render() {
+      const ordenados = [...usuarios].sort((a, b) => ORDEM.indexOf(a.cargo) - ORDEM.indexOf(b.cargo) || a.nome.localeCompare(b.nome));
+      let grupoAtual = null;
+      $('#lista').innerHTML = ordenados.map((u) => {
+        const titulo = GRUPO[u.cargo] !== grupoAtual ? `<div class="grupo-titulo">${(grupoAtual = GRUPO[u.cargo])}</div>` : '';
+        const ehEu = u.id === eu.id;
+        const editavel = !ehEu && cargos.some((c) => c.id === u.cargo);
+        const iniciais = u.nome.split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+        return `${titulo}
+          <div class="usuario-linha${u.ativo ? '' : ' inativo'}">
+            <div class="avatar ${u.cargo}">${esc(iniciais)}</div>
+            <div class="usuario-info">
+              <b>${esc(u.nome)}
+                ${ehEu ? '<span class="etiqueta voce">você</span>' : ''}
+                ${u.ativo ? '' : '<span class="etiqueta inativo">desativado</span>'}
+              </b>
+              <small>${esc(u.cargoNome)} · ${esc(u.usuario)} · entra com ${u.login === 'pin' ? 'PIN' : 'senha'} · ${quando(u.ultimoAcesso)}</small>
+            </div>
+            ${editavel ? `<button class="botao sec" data-editar="${u.id}">Editar</button>` : ehEu ? '<a class="botao sec" href="/conta.html" style="text-decoration:none">Minha conta</a>' : ''}
+          </div>`;
+      }).join('') || '<p style="color:var(--suave)">Nenhum usuário ainda.</p>';
+    }
+
+    async function carregar() {
+      const res = await Sessao.api('/api/usuarios');
+      const dados = await res.json();
+      usuarios = dados.usuarios;
+      cargos = dados.cargos;
+      render();
+    }
+
+    function ajustarSegredo() {
+      const cargo = cargos.find((c) => c.id === $('#d-cargo').value);
+      const ehPin = cargo.login === 'pin';
+      const input = $('#d-segredo');
+      const mudouTipo = editando && cargos.find((c) => c.id === editando.cargo)?.login !== cargo.login;
+      const obrigatorio = !editando || mudouTipo;
+      $('#d-rotulo-segredo').textContent = editando
+        ? `${ehPin ? 'Novo PIN' : 'Nova senha'}${obrigatorio ? '' : ' (deixe vazio para manter)'}`
+        : ehPin ? 'PIN' : 'Senha';
+      $('#d-dica-segredo').textContent = ehPin ? '4 números. A pessoa usa o PIN para entrar.' : 'Pelo menos 8 caracteres.';
+      input.type = ehPin ? 'text' : 'password';
+      input.inputMode = ehPin ? 'numeric' : 'text';
+      input.maxLength = ehPin ? 4 : 100;
+      input.required = obrigatorio;
+    }
+
+    function abrir(usuario) {
+      editando = usuario;
+      $('#d-titulo').textContent = usuario ? `Editar ${usuario.nome}` : 'Novo usuário';
+      $('#d-erro').hidden = true;
+      $('#d-cargo').innerHTML = cargos.map((c) => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+      $('#d-nome').value = usuario ? usuario.nome : '';
+      $('#d-usuario').value = usuario ? usuario.usuario : '';
+      $('#campo-usuario').hidden = !!usuario;
+      $('#d-usuario').required = !usuario;
+      $('#d-cargo').value = usuario ? usuario.cargo : 'garcom';
+      $('#d-segredo').value = '';
+      $('#campo-ativo').hidden = !usuario;
+      $('#d-ativo').checked = usuario ? usuario.ativo : true;
+      ajustarSegredo();
+      $('#dialogo').showModal();
+      $('#d-nome').focus();
+    }
+
+    async function salvar(e) {
+      e.preventDefault();
+      const corpo = { nome: $('#d-nome').value, cargo: $('#d-cargo').value };
+      if ($('#d-segredo').value) corpo.segredo = $('#d-segredo').value;
+      if (editando) corpo.ativo = $('#d-ativo').checked;
+      else corpo.usuario = $('#d-usuario').value;
+
+      $('#d-salvar').disabled = true;
+      try {
+        const res = await Sessao.api(editando ? `/api/usuarios/${editando.id}` : '/api/usuarios', {
+          method: editando ? 'PATCH' : 'POST',
+          body: JSON.stringify(corpo),
+        });
+        const dados = await res.json();
+        if (!res.ok) {
+          $('#d-erro').textContent = dados.erro;
+          $('#d-erro').hidden = false;
+          return;
+        }
+        $('#dialogo').close();
+        Sessao.avisar(editando ? `${dados.nome} atualizado.` : `${dados.nome} criado. Login: ${dados.usuario}`);
+        await carregar();
+      } finally {
+        $('#d-salvar').disabled = false;
+      }
+    }
+
+    (async () => {
+      eu = await Sessao.carregar();
+      $('#titulo-lista').textContent = Sessao.pode('usuarios:todos') ? 'Todos os usuários' : 'Equipe (garçons e cozinhas)';
+      const info = await fetch('/api/info').then((r) => r.json()).catch(() => null);
+      if (info) $('#loja').textContent = info.loja.nome;
+
+      $('#novo').addEventListener('click', () => abrir(null));
+      $('#lista').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-editar]');
+        if (b) abrir(usuarios.find((u) => u.id === Number(b.dataset.editar)));
+      });
+      $('#d-cargo').addEventListener('change', ajustarSegredo);
+      $('#d-cancelar').addEventListener('click', () => $('#dialogo').close());
+      $('#form').addEventListener('submit', salvar);
+      await carregar();
+    })();
+  </script>
+</body>
+</html>

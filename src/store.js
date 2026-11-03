@@ -98,7 +98,8 @@ function criarStore() {
     return { ...pedido, tickets: pedido.ticketIds.map(buscarTicket) };
   }
 
-  function criarPedido({ tipo, mesa, garcom, itens }) {
+  // garcomId/garcom vêm do usuário logado (o servidor preenche), não do formulário.
+  function criarPedido({ tipo, mesa, garcom, garcomId = null, itens }) {
     const { tipo: tipoOk, identificador } = validarIdentificacao({ tipo, mesa });
     if (!Array.isArray(itens) || itens.length === 0) {
       throw new ErroValidacao('O pedido precisa ter pelo menos um item.');
@@ -114,6 +115,7 @@ function criarStore() {
       mesa: identificador,
       rotulo: rotuloDoPedido(tipoOk, identificador),
       garcom: String(garcom ?? '').trim().slice(0, 40),
+      garcomId,
       itens: itensValidos,
       total: Math.round(itensValidos.reduce((s, i) => s + i.preco * i.qtd, 0) * 100) / 100,
       cancelado: false,
@@ -133,6 +135,7 @@ function criarStore() {
         mesa: pedido.mesa,
         rotulo: pedido.rotulo,
         garcom: pedido.garcom,
+        garcomId,
         itens: itensCozinha.map(({ nome, sabores, tamanho, qtd, obs }) => ({ nome, sabores, tamanho, qtd, obs })),
         status: 'novo',
         impressao: 'pendente',
@@ -183,8 +186,9 @@ function criarStore() {
     return tickets.filter((t) => t.cozinhaId === Number(cozinhaId));
   }
 
-  function pedidosRecentes(limite = 30) {
-    return pedidos.slice(-limite).reverse().map(comTickets);
+  // O filtro vem antes do limite: o garçom vê os seus 30 últimos, não 30 de todos.
+  function pedidosRecentes(limite = 30, filtro = () => true) {
+    return pedidos.filter(filtro).slice(-limite).reverse().map(comTickets);
   }
 
   function resumo() {
