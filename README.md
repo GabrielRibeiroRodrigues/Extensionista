@@ -74,6 +74,31 @@ Na tela da cozinha, marque **"Imprimir neste PC"**. Cada pedido novo abre a impr
 msedge --kiosk --kiosk-printing http://IP:3000/cozinha/1
 ```
 
+## Publicação na VPS
+
+O sistema roda em Docker na VPS como um projeto isolado (`pizzaria`), com container, rede e volume próprios. Ele usa a porta **8080** e não mexe nos outros serviços do servidor, que ficam nas portas 80 e 443.
+
+- Painel: `http://187.41.102.56:8080/painel`
+- Garçom: `http://187.41.102.56:8080/`
+
+Para publicar uma nova versão, commite e rode (no Git Bash):
+
+```bash
+./deploy.sh
+```
+
+O script envia por SSH a versão commitada para `/opt/pizzaria`, reconstrói só o container `pizzaria-app` e confere se ele respondeu. Os pedidos ficam no volume `pizzaria_dados` e são mantidos entre deploys.
+
+Comandos úteis na VPS:
+
+```bash
+docker logs -f pizzaria-app                                   # logs
+docker restart pizzaria-app                                   # reiniciar
+docker exec pizzaria-app rm /dados/pedidos.json && docker restart pizzaria-app   # zerar os pedidos
+```
+
+Na VPS, as impressoras de rede da pizzaria não são alcançáveis, porque estão na rede local dela. Lá a impressão fica no modo simulado (tela `/impressoras`) ou usa a opção "Imprimir neste PC" na tela da cozinha. O sistema não tem login: qualquer pessoa com o endereço consegue usá-lo.
+
 ## Configuração
 
 | Variável | Padrão | Uso |
