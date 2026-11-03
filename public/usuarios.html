@@ -3,24 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#b3261e">
+  <meta name="theme-color" content="#ffc72c">
   <title>Usuários</title>
   <link rel="icon" href="/icone.svg">
+  <link rel="stylesheet" href="/marca.css">
   <link rel="stylesheet" href="/admin.css">
   <link rel="stylesheet" href="/sessao.css">
 </head>
 <body>
   <header class="faixa">
     <div class="faixa-conteudo">
-      <div><small id="loja">Pizzaria</small><h1>Usuários</h1></div>
+      <a class="logo" href="/"><img src="/mascote.svg" alt=""><span class="marca-nome">Frangonete</span></a>
       <div id="sessao"></div>
     </div>
   </header>
 
   <main class="conteudo">
     <div class="barra-acoes">
-      <h2 id="titulo-lista">Equipe</h2>
-      <button id="novo" class="botao">+ Novo usuário</button>
+      <div>
+        <h1 class="titulo-pagina">Usuários</h1>
+        <p class="subtitulo-pagina" id="titulo-lista">Equipe</p>
+      </div>
+      <button id="novo" class="adesivo botao">Novo usuário</button>
     </div>
     <div id="lista" class="lista-usuarios"></div>
   </main>
@@ -48,8 +52,8 @@
         <input id="d-ativo" type="checkbox">
       </label>
       <div class="dialogo-acoes">
-        <button type="button" class="botao sec" id="d-cancelar">Cancelar</button>
-        <button type="submit" class="botao" id="d-salvar">Salvar</button>
+        <button type="button" class="adesivo botao" style="background:var(--papel)" id="d-cancelar">Cancelar</button>
+        <button type="submit" class="adesivo escuro botao" id="d-salvar">Salvar</button>
       </div>
     </form>
   </dialog>
@@ -66,10 +70,10 @@
     let eu;
 
     function quando(iso) {
-      if (!iso) return 'nunca entrou';
+      if (!iso) return 'Ainda não entrou.';
       const d = new Date(iso);
       const hoje = new Date().toDateString() === d.toDateString();
-      return `último acesso ${hoje ? 'hoje' : d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      return `Último acesso ${hoje ? 'hoje' : d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.`;
     }
 
     function render() {
@@ -88,9 +92,9 @@
                 ${ehEu ? '<span class="etiqueta voce">você</span>' : ''}
                 ${u.ativo ? '' : '<span class="etiqueta inativo">desativado</span>'}
               </b>
-              <small>${esc(u.cargoNome)} · ${esc(u.usuario)} · entra com ${u.login === 'pin' ? 'PIN' : 'senha'} · ${quando(u.ultimoAcesso)}</small>
+              <small>${esc(u.cargoNome)}, entra como <b style="display:inline">${esc(u.usuario)}</b> com ${u.login === 'pin' ? 'PIN' : 'senha'}. ${quando(u.ultimoAcesso)}</small>
             </div>
-            ${editavel ? `<button class="botao sec" data-editar="${u.id}">Editar</button>` : ehEu ? '<a class="botao sec" href="/conta.html" style="text-decoration:none">Minha conta</a>' : ''}
+            ${editavel ? `<button class="adesivo botao-linha" data-editar="${u.id}">Editar</button>` : ehEu ? '<a class="adesivo botao-linha" href="/conta.html">Minha conta</a>' : ''}
           </div>`;
       }).join('') || '<p style="color:var(--suave)">Nenhum usuário ainda.</p>';
     }
@@ -166,9 +170,7 @@
 
     (async () => {
       eu = await Sessao.carregar();
-      $('#titulo-lista').textContent = Sessao.pode('usuarios:todos') ? 'Todos os usuários' : 'Equipe (garçons e cozinhas)';
-      const info = await fetch('/api/info').then((r) => r.json()).catch(() => null);
-      if (info) $('#loja').textContent = info.loja.nome;
+      $('#titulo-lista').textContent = Sessao.pode('usuarios:todos') ? 'Quem acessa o sistema e com qual cargo.' : 'Garçons e cozinhas da sua equipe.';
 
       $('#novo').addEventListener('click', () => abrir(null));
       $('#lista').addEventListener('click', (e) => {

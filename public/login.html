@@ -3,59 +3,73 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#b3261e">
-  <title>Entrar</title>
+  <meta name="theme-color" content="#ffc72c">
+  <title>Entrar · Frangonete</title>
   <link rel="icon" href="/icone.svg">
   <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/marca.css">
   <link rel="stylesheet" href="/admin.css">
 </head>
-<body>
+<body class="pagina-login">
   <main class="login">
-    <div class="cartao">
+    <div class="login-caixa">
       <div class="login-marca">
-        <img class="logo" src="/icone.svg" alt="">
-        <h1 id="loja">Pizzaria</h1>
-        <p>Entre para continuar</p>
+        <img src="/mascote.svg" alt="">
+        <span class="marca-nome" id="loja">Frangonete</span>
+        <p>Pedidos do salão direto para a cozinha</p>
       </div>
 
-      <div class="modos" role="tablist">
-        <button data-modo="pin" class="ativo" role="tab">Garçom · Cozinha</button>
-        <button data-modo="senha" role="tab">Dono · Gerente</button>
+      <div class="cartao">
+        <!-- Modo demonstração: entrada em 1 toque -->
+        <section id="demo" hidden>
+          <h1 class="demo-titulo">Entrar como</h1>
+          <p class="demo-texto">Escolha um perfil para ver o sistema pelos olhos de cada pessoa da equipe.</p>
+          <div id="perfis" class="perfis"></div>
+          <button type="button" id="mostrar-acesso" class="outro-acesso">Entrar com usuário e PIN</button>
+        </section>
+
+        <section id="acesso">
+          <div class="modos" role="tablist">
+            <button data-modo="pin" class="ativo" role="tab">Garçom e cozinha</button>
+            <button data-modo="senha" role="tab">Dono e gerente</button>
+          </div>
+
+          <div id="erro" class="erro" role="alert" hidden></div>
+
+          <form id="form-pin" autocomplete="off">
+            <label class="campo">Usuário
+              <input id="usuario-pin" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="ex.: ana" required>
+            </label>
+            <div class="campo" style="margin-bottom:8px">PIN</div>
+            <div id="pontos" class="pontos" aria-live="polite"><span></span><span></span><span></span><span></span></div>
+            <div class="teclado" id="teclado">
+              <button type="button" data-tecla="1">1</button><button type="button" data-tecla="2">2</button><button type="button" data-tecla="3">3</button>
+              <button type="button" data-tecla="4">4</button><button type="button" data-tecla="5">5</button><button type="button" data-tecla="6">6</button>
+              <button type="button" data-tecla="7">7</button><button type="button" data-tecla="8">8</button><button type="button" data-tecla="9">9</button>
+              <button type="button" class="tecla-acao" data-tecla="limpar">Limpar</button><button type="button" data-tecla="0">0</button><button type="button" class="tecla-acao" data-tecla="apagar" aria-label="Apagar">⌫</button>
+            </div>
+          </form>
+
+          <form id="form-senha" hidden>
+            <label class="campo">Usuário
+              <input id="usuario-senha" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+            </label>
+            <label class="campo">Senha
+              <input id="senha" name="password" type="password" autocomplete="current-password" required>
+            </label>
+            <button class="adesivo escuro botao largo" type="submit">Entrar</button>
+          </form>
+        </section>
       </div>
-
-      <div id="erro" class="erro" role="alert" hidden></div>
-
-      <!-- PIN -->
-      <form id="form-pin" autocomplete="off">
-        <label class="campo">Usuário
-          <input id="usuario-pin" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="ex.: ana" required>
-        </label>
-        <div class="campo" style="margin-bottom:6px">PIN</div>
-        <div id="pontos" class="pontos" aria-live="polite"><span></span><span></span><span></span><span></span></div>
-        <div class="teclado" id="teclado">
-          <button type="button" data-tecla="1">1</button><button type="button" data-tecla="2">2</button><button type="button" data-tecla="3">3</button>
-          <button type="button" data-tecla="4">4</button><button type="button" data-tecla="5">5</button><button type="button" data-tecla="6">6</button>
-          <button type="button" data-tecla="7">7</button><button type="button" data-tecla="8">8</button><button type="button" data-tecla="9">9</button>
-          <button type="button" class="tecla-acao" data-tecla="limpar">Limpar</button><button type="button" data-tecla="0">0</button><button type="button" class="tecla-acao" data-tecla="apagar" aria-label="Apagar">⌫</button>
-        </div>
-      </form>
-
-      <!-- Senha -->
-      <form id="form-senha" hidden>
-        <label class="campo">Usuário
-          <input id="usuario-senha" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
-        </label>
-        <label class="campo">Senha
-          <input id="senha" name="password" type="password" autocomplete="current-password" required>
-        </label>
-        <button class="botao largo" type="submit">Entrar</button>
-      </form>
     </div>
   </main>
 
   <script>
     const $ = (s) => document.querySelector(s);
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
     const params = new URLSearchParams(location.search);
+    const ORDEM = ['dono', 'gerente', 'garcom', 'cozinha1', 'cozinha2'];
+    const ABRE = { dono: 'Painel', gerente: 'Painel', garcom: 'Pedidos', cozinha1: 'Pizzas', cozinha2: 'Massas' };
     let modo = 'pin';
     let pin = '';
     let enviando = false;
@@ -82,34 +96,34 @@
       $('#form-senha').hidden = novo !== 'senha';
       mostrarErro('');
       lembrar('login-modo', novo);
-      (novo === 'pin' ? $('#usuario-pin') : $('#usuario-senha')).focus();
     }
 
     function desenharPontos() {
       document.querySelectorAll('#pontos span').forEach((s, i) => s.classList.toggle('cheio', i < pin.length));
     }
 
-    async function entrar(usuario, segredo) {
+    async function postar(url, corpo) {
       if (enviando) return false;
       enviando = true;
       mostrarErro('');
       try {
-        const res = await fetch('/api/entrar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ usuario, segredo }),
-        });
+        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
         const dados = await res.json();
         if (!res.ok) throw new Error(dados.erro || 'Não foi possível entrar.');
-        lembrar(`login-usuario-${modo}`, usuario);
         location.href = destino(dados.usuario);
         return true;
       } catch (err) {
-        mostrarErro(err.message === 'Failed to fetch' ? 'Sem conexão com o servidor.' : err.message);
+        mostrarErro(err.message === 'Failed to fetch' ? 'Sem conexão com o servidor. Confira o Wi-Fi e tente de novo.' : err.message);
         return false;
       } finally {
         enviando = false;
       }
+    }
+
+    async function entrar(usuario, segredo) {
+      const ok = await postar('/api/entrar', { usuario, segredo });
+      if (ok) lembrar(`login-usuario-${modo}`, usuario);
+      return ok;
     }
 
     async function teclar(tecla) {
@@ -120,12 +134,11 @@
       if (pin.length === 4) {
         const usuario = $('#usuario-pin').value.trim();
         if (!usuario) {
-          mostrarErro('Informe o seu usuário.');
+          mostrarErro('Digite o seu usuário antes do PIN.');
           $('#usuario-pin').focus();
           return;
         }
-        const ok = await entrar(usuario, pin);
-        if (!ok) {
+        if (!(await entrar(usuario, pin))) {
           $('#pontos').classList.add('tremer');
           setTimeout(() => $('#pontos').classList.remove('tremer'), 400);
           pin = '';
@@ -134,15 +147,40 @@
       }
     }
 
+    function mostrarDemo(perfis) {
+      const ordenados = [...perfis].sort((a, b) => ORDEM.indexOf(a.cargo) - ORDEM.indexOf(b.cargo));
+      $('#perfis').innerHTML = ordenados.map((p) => {
+        const iniciais = p.nome.split(/\s+/).map((x) => x[0]).slice(0, 2).join('').toUpperCase();
+        return `
+          <button type="button" class="perfil" data-perfil="${esc(p.usuario)}">
+            <span class="avatar ${p.cargo}">${esc(iniciais)}</span>
+            <span><b>${esc(p.nome)}</b><small>${esc(p.cargoNome)}</small></span>
+            <span class="vai">${ABRE[p.cargo]}</span>
+          </button>`;
+      }).join('');
+      $('#demo').hidden = false;
+      $('#acesso').hidden = true;
+    }
+
     document.querySelectorAll('[data-modo]').forEach((b) => b.addEventListener('click', () => trocarModo(b.dataset.modo)));
     $('#teclado').addEventListener('click', (e) => {
       const b = e.target.closest('[data-tecla]');
       if (b) teclar(b.dataset.tecla);
     });
+    $('#perfis').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-perfil]');
+      if (b) postar('/api/demo/entrar', { usuario: b.dataset.perfil });
+    });
+    $('#mostrar-acesso').addEventListener('click', () => {
+      $('#demo').hidden = true;
+      $('#acesso').hidden = false;
+      $('#usuario-pin').focus();
+    });
     // Teclado físico também funciona (útil no PC da cozinha).
     document.addEventListener('keydown', (e) => {
-      if (modo !== 'pin' || e.target.id === 'usuario-pin') {
-        if (modo === 'pin' && e.key === 'Enter') { e.preventDefault(); document.activeElement.blur(); }
+      if ($('#acesso').hidden || modo !== 'pin') return;
+      if (e.target.id === 'usuario-pin') {
+        if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
         return;
       }
       if (/^\d$/.test(e.key)) teclar(e.key);
@@ -158,15 +196,11 @@
       // Já logado? Vai direto para a tela dele.
       const eu = await fetch('/api/eu').catch(() => null);
       if (eu && eu.ok) return (location.href = destino(await eu.json()));
-      const info = await fetch('/api/info').then((r) => r.json()).catch(() => null);
-      if (info) {
-        $('#loja').textContent = info.loja.nome;
-        document.title = `Entrar · ${info.loja.nome}`;
-      }
       $('#usuario-pin').value = lembrado('login-usuario-pin');
       $('#usuario-senha').value = lembrado('login-usuario-senha');
       trocarModo(lembrado('login-modo') || 'pin');
-      if (modo === 'pin' && $('#usuario-pin').value) $('#usuario-pin').blur();
+      const demo = await fetch('/api/demo').then((r) => r.json()).catch(() => null);
+      if (demo && demo.ativo) mostrarDemo(demo.perfis);
     })();
   </script>
 </body>

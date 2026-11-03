@@ -4,6 +4,7 @@
 
 const Sessao = (() => {
   let usuario = null;
+  let demo = false;
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const nuncaResolve = () => new Promise(() => {});
 
@@ -37,6 +38,7 @@ const Sessao = (() => {
       return nuncaResolve();
     }
     usuario = await res.json();
+    demo = await fetch('/api/demo').then((r) => r.json()).then((d) => d.ativo).catch(() => false);
     if (usuario.trocarSegredo && location.pathname !== '/conta.html') {
       location.href = '/conta.html?primeiro=1';
       return nuncaResolve();
@@ -66,6 +68,8 @@ const Sessao = (() => {
 
   // Tempo real: se a conexão cair porque a sessão acabou (ex.: usuário desativado), vai ao login.
   function vigiar(fonte) {
+    // Demonstração restaurada: todas as telas abertas recarregam com os exemplos novos.
+    fonte.addEventListener('recarregar', () => location.reload());
     fonte.addEventListener('error', async () => {
       const r = await fetch('/api/eu').catch(() => null);
       if (r && r.status === 401) irParaLogin();
@@ -91,13 +95,31 @@ const Sessao = (() => {
           <span class="cracha-texto"><b>${esc(usuario.nome)}</b><small>${esc(usuario.cargoNome)}</small></span>
         </summary>
         <div class="cracha-menu">
-          ${telas.length > 1 ? `<div class="cracha-secao">Telas</div>${telas.map((t) => `
+          ${telas.length > 1 ? `<div class="cracha-secao">Ir para</div>${telas.map((t) => `
             <a href="${t.url}" class="${atual === t.url || location.pathname + location.search === `/cozinha.html?id=${t.url.slice(-1)}` ? 'atual' : ''}">${esc(t.rotulo)}</a>`).join('')}<hr>` : ''}
           <a href="/conta.html">Minha conta</a>
-          <button type="button" data-sair>Sair</button>
+          <button type="button" data-restaurar hidden>Restaurar pedidos de exemplo</button>
+          <button type="button" data-sair>${demo ? 'Trocar de perfil' : 'Sair'}</button>
         </div>
       </details>`;
     alvo.querySelector('[data-sair]').addEventListener('click', sair);
+    document.querySelectorAll('a.logo').forEach((a) => (a.href = usuario.inicio));
+    if (demo) {
+      const selo = document.createElement('span');
+      selo.className = 'selo-demo';
+      selo.textContent = 'Demonstração';
+      alvo.prepend(selo);
+      alvo.style.display = 'flex';
+      alvo.style.alignItems = 'center';
+      alvo.style.gap = '10px';
+      const restaurar = alvo.querySelector('[data-restaurar]');
+      restaurar.hidden = !pode('painel');
+      restaurar.addEventListener('click', async () => {
+        restaurar.disabled = true;
+        await api('/api/demo/restaurar', { method: 'POST' });
+        location.reload();
+      });
+    }
     document.addEventListener('click', (e) => {
       const menu = alvo.querySelector('.cracha');
       if (menu.open && !menu.contains(e.target)) menu.open = false;

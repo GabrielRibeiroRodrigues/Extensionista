@@ -92,9 +92,9 @@ function renderCategorias() {
 }
 
 function rotuloCozinha(cozinhaId) {
-  if (!cozinhaId) return '<span class="tag-cozinha c0">Balcão</span>';
+  if (!cozinhaId) return '<span class="tag-cozinha">servido no balcão</span>';
   const c = estado.menu.cozinhas[cozinhaId];
-  return `<span class="tag-cozinha c${c.id}">${esc(c.nome)}</span>`;
+  return `<span class="tag-cozinha">vai para a ${esc(c.nome)}</span>`;
 }
 
 function htmlProduto(p) {
@@ -103,7 +103,7 @@ function htmlProduto(p) {
     return `
       <article class="produto${qtd ? ' no-carrinho' : ''}" data-pizza="${p.id}">
         <div class="info">
-          <div class="nome">${esc(p.nome)}</div>
+          <div class="nome">${esc(p.nome)}${p.destaque ? '<span class="da-casa">da casa</span>' : ''}</div>
           <div class="desc">${esc(p.descricao)}</div>
           <div class="preco"><small>a partir de</small> ${brl(p.precos.B)}</div>
           ${qtd ? `<div class="no-pedido">${qtd} no pedido</div>` : ''}
@@ -116,7 +116,7 @@ function htmlProduto(p) {
   return `
     <article class="produto${qtd ? ' no-carrinho' : ''}" data-simples="${p.id}">
       <div class="info">
-        <div class="nome">${esc(p.nome)}</div>
+        <div class="nome">${esc(p.nome)}${p.destaque ? '<span class="da-casa">da casa</span>' : ''}</div>
         <div class="desc">${esc(p.descricao)}</div>
         <div class="preco">${brl(p.preco)}</div>
       </div>
@@ -227,9 +227,9 @@ function renderCarrinho() {
 
   $('#itens-carrinho').innerHTML = ordem.map((c) => {
     const titulo = c
-      ? `${estado.menu.cozinhas[c].nome} · ${estado.menu.cozinhas[c].setor}`
-      : 'Balcão · não vai para a cozinha';
-    return `<p class="destino-cozinha">→ ${esc(titulo)}</p>` + grupos.get(c).map((l) => `
+      ? `${estado.menu.cozinhas[c].setor} vão para a ${estado.menu.cozinhas[c].nome}`
+      : 'Servido no balcão';
+    return `<p class="destino-cozinha">${esc(titulo)}</p>` + grupos.get(c).map((l) => `
       <div class="item-carrinho" data-linha="${l.id}">
         <div class="linha">
           <span class="nome">${esc(nomeLinha(l))}
@@ -299,11 +299,11 @@ async function enviarPedido() {
 
 function mostrarSucesso(pedido) {
   const contar = (itens) => itens.reduce((s, i) => s + i.qtd, 0);
-  const destinos = pedido.tickets.map((t) => ({ nome: t.cozinhaNome.replace(' - ', ' · '), qtd: contar(t.itens) }));
+  const destinos = pedido.tickets.map((t) => ({ nome: `${t.cozinhaNome.split(' - ')[1]} na ${t.cozinhaNome.split(' - ')[0]}`, qtd: contar(t.itens) }));
   const balcao = pedido.itens.filter((i) => i.cozinhaId == null);
-  if (balcao.length) destinos.push({ nome: 'Balcão', qtd: contar(balcao) });
+  if (balcao.length) destinos.push({ nome: 'Bebidas no balcão', qtd: contar(balcao) });
 
-  $('#sucesso-titulo').textContent = `Pedido #${pedido.numero} · ${pedido.rotulo}`;
+  $('#sucesso-titulo').textContent = `${pedido.rotulo}: pedido #${pedido.numero} enviado`;
   $('#sucesso-destinos').innerHTML = destinos
     .map((d) => `<li>${esc(d.nome)} <small>${d.qtd} ${d.qtd === 1 ? 'item' : 'itens'}</small></li>`)
     .join('');
@@ -333,11 +333,11 @@ function renderPedidos() {
       const qtd = p.itens.reduce((s, i) => s + i.qtd, 0);
       return `
         <article class="pedido-card${p.cancelado ? ' cancelado' : ''}">
-          <header><h4>#${p.numero} · ${esc(p.rotulo)}</h4><time>${hora(p.criadoEm)}</time></header>
-          <div class="resumo">${qtd} ${qtd === 1 ? 'item' : 'itens'} · ${brl(p.total)}${p.garcom ? ` · ${esc(p.garcom)}` : ''}</div>
+          <header><h4>${esc(p.rotulo)} <small class="numero-pedido">#${p.numero}</small></h4><time>${hora(p.criadoEm)}</time></header>
+          <div class="resumo">${brl(p.total)} em ${qtd} ${qtd === 1 ? 'item' : 'itens'}${p.garcom ? `, por ${esc(p.garcom)}` : ''}</div>
           ${p.tickets.map((t) => `
             <div class="status-linha">
-              <span>${esc(t.cozinhaNome.replace(' - ', ' · '))}</span>
+              <span>${esc(t.cozinhaNome.split(' - ')[1])}</span>
               <span>
                 ${t.impressao === 'falhou' ? '<span class="status impressao-falhou">Não impresso</span>' : ''}
                 <span class="status ${t.status}">${ROTULO_STATUS[t.status]}</span>

@@ -3,18 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#b3261e">
+  <meta name="theme-color" content="#ffc72c">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icone.svg">
   <link rel="apple-touch-icon" href="/icone.svg">
-  <title>Pedidos · Garçom</title>
+  <title>Frangonete</title>
+  <link rel="stylesheet" href="/marca.css">
   <link rel="stylesheet" href="/garcom.css">
   <link rel="stylesheet" href="/sessao.css">
 </head>
 <body>
   <header class="topo">
     <div class="topo-linha">
-      <div class="marca"><span id="nome-loja">Pizzaria</span> <span id="conexao" class="conexao" title="Conexão com o servidor"></span></div>
+      <div class="marca">
+        <a class="logo" href="/"><img src="/mascote.svg" alt=""><span class="marca-nome" id="nome-loja">Frangonete</span></a>
+        <span id="conexao" class="conexao" title="Conexão com o servidor"></span>
+      </div>
       <div id="sessao"></div>
     </div>
     <nav class="abas" role="tablist">
@@ -38,7 +42,7 @@
     </section>
 
     <div class="busca-categorias">
-      <input id="busca" type="search" placeholder="Buscar no cardápio…" autocomplete="off">
+      <input id="busca" type="search" placeholder="Buscar sabor ou ingrediente" autocomplete="off">
       <nav id="categorias" class="categorias"></nav>
     </div>
     <div id="produtos"></div>
@@ -54,7 +58,7 @@
     <div id="lista-pedidos"></div>
   </main>
 
-  <button id="barra-carrinho" class="barra-carrinho" hidden>
+  <button id="barra-carrinho" class="barra-carrinho adesivo escuro" hidden>
     <span class="qtd"><b id="qtd-carrinho">0</b></span>
     <span>Revisar pedido</span>
     <span id="total-carrinho">R$ 0,00</span>
@@ -72,7 +76,7 @@
     <div id="itens-carrinho" class="folha-corpo"></div>
     <div class="folha-rodape">
       <div class="total"><span>Total</span><b id="total-folha">R$ 0,00</b></div>
-      <button id="enviar" class="botao-principal">Enviar para as cozinhas</button>
+      <button id="enviar" class="botao-principal adesivo">Enviar para as cozinhas</button>
     </div>
   </section>
 
@@ -105,17 +109,17 @@
         <b id="qtd-pizza">1</b>
         <button data-qtd-pizza="1" class="mais" aria-label="Aumentar">+</button>
       </div>
-      <button id="adicionar-pizza" class="botao-principal">Adicionar</button>
+      <button id="adicionar-pizza" class="botao-principal adesivo">Adicionar</button>
     </div>
   </section>
 
   <!-- Pedido enviado -->
   <div id="sucesso" class="sucesso" hidden>
     <div class="sucesso-caixa">
-      <div class="sucesso-icone">✓</div>
+      <img class="sucesso-icone" src="/mascote.svg" alt="">
       <h2 id="sucesso-titulo">Pedido enviado</h2>
       <ul id="sucesso-destinos"></ul>
-      <button id="novo-pedido" class="botao-principal">Novo pedido</button>
+      <button id="novo-pedido" class="botao-principal adesivo">Novo pedido</button>
     </div>
   </div>
 
@@ -124,8 +128,8 @@
       <h3 id="confirmar-titulo"></h3>
       <p id="confirmar-texto"></p>
       <div class="dialogo-acoes">
-        <button value="nao" class="botao-sec">Voltar</button>
-        <button value="sim" class="botao-perigo">Cancelar pedido</button>
+        <button value="nao" class="adesivo" style="background:var(--papel)">Voltar</button>
+        <button value="sim" class="adesivo perigo">Cancelar pedido</button>
       </div>
     </form>
   </dialog>
