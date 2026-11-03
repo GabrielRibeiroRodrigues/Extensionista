@@ -99,7 +99,8 @@ function criarStore() {
   }
 
   // garcomId/garcom vêm do usuário logado (o servidor preenche), não do formulário.
-  function criarPedido({ tipo, mesa, garcom, garcomId = null, itens }) {
+  // `opcoes.criadoEm` serve só aos pedidos de exemplo (horários variados na demonstração).
+  function criarPedido({ tipo, mesa, garcom, garcomId = null, itens }, opcoes = {}) {
     const { tipo: tipoOk, identificador } = validarIdentificacao({ tipo, mesa });
     if (!Array.isArray(itens) || itens.length === 0) {
       throw new ErroValidacao('O pedido precisa ter pelo menos um item.');
@@ -107,7 +108,7 @@ function criarStore() {
     const itensValidos = itens.map(validarItem);
 
     const numero = proximoNumero++;
-    const agora = new Date().toISOString();
+    const agora = opcoes.criadoEm || new Date().toISOString();
     const pedido = {
       id: numero,
       numero,
@@ -214,6 +215,10 @@ function criarStore() {
     return { proximoNumero, proximoTicket, pedidos, tickets };
   }
 
+  function limpar() {
+    importar({});
+  }
+
   function importar(dados) {
     pedidos = dados.pedidos || [];
     tickets = dados.tickets || [];
@@ -233,6 +238,7 @@ function criarStore() {
     resumo,
     exportar,
     importar,
+    limpar,
   };
 }
 

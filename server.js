@@ -8,11 +8,14 @@ const path = require('node:path');
 const { criarStore, ErroValidacao } = require('./src/store');
 const { loja, cozinhas, cardapioPublico } = require('./src/menu');
 const impressora = require('./src/impressora');
-const { popularExemplos } = require('./src/seed');
+const { popularExemplos, PERFIS_DEMO } = require('./src/seed');
 const { ligarPersistencia } = require('./src/persistencia');
 const { criarAuth, pode, CARGOS, ErroAuth } = require('./src/auth');
 
 const PRINCIPAL = require.main === module;
+// Modo demonstração: perfis prontos com entrada em 1 toque e pedidos de exemplo.
+// Nunca deixe ligado em uso real: qualquer pessoa com o endereço entra como qualquer perfil.
+const DEMO = process.env.DEMO === '1';
 const PORTA = Number(process.env.PORT) || 3000;
 const VERSAO = process.env.VERSAO || 'dev'; // commit publicado; o deploy confere por aqui
 const PUBLICO = path.join(__dirname, 'public');
@@ -276,6 +279,23 @@ async function rotear(req, res) {
   const patch = req.method === 'PATCH';
   let m;
 
+  // ----- Demonstração -----
+  if (get && p === '/api/demo') {
+    return json(res, 200, DEMO ? { ativo: true, perfis: auth.perfisDemo() } : { ativo: false });
+  }
+  if (post && p === '/api/demo/entrar') {
+    if (!DEMO) return json(res, 404, { erro: 'Rota não encontrada' });
+    const { usuario } = await lerCorpo(req);
+    const r = auth.entrarDemo(usuario);
+    return json(res, 200, { usuario: r.usuario }, { 'Set-Cookie': cookieSessao(r.token) });
+  }
+  if (post && p === '/api/demo/restaurar') {
+    if (!DEMO) return json(res, 404, { erro: 'Rota não encontrada' });
+    exigir(req, 'painel');
+    restaurarDemo();
+    return json(res, 200, { ok: true });
+  }
+
   // ----- Público -----
   if (get && p === '/api/info') {
     const u = usuarioDe(req);
@@ -419,13 +439,29 @@ const servidor = http.createServer((req, res) => {
   });
 });
 
+// ---------- Demonstração ----------
+function usuariosDemo() {
+  return Object.fromEntries(auth.perfisDemo().map((u) => [u.usuario, { id: u.id, nome: u.nome }]));
+}
+
+// Volta aos pedidos de exemplo, com horários a partir de agora, e recarrega as telas abertas.
+function restaurarDemo() {
+  store.limpar();
+  impressoes.length = 0;
+  popularExemplos(store, usuariosDemo());
+  for (const c of clientes) c.res.write('event: recarregar\ndata: {}\n\n');
+}
+
+if (DEMO) auth.prepararDemo(PERFIS_DEMO);
+
 if (PRINCIPAL) {
   const arquivoDados = process.env.ARQUIVO_DADOS || path.join(PASTA_DADOS, 'pedidos.json');
   const { restaurado } = ligarPersistencia(store, arquivoDados);
   if (restaurado) console.log(`\n  Pedidos restaurados de ${arquivoDados}`);
-  else if (process.env.SEM_EXEMPLOS !== '1') popularExemplos(store);
+  else if (process.env.SEM_EXEMPLOS !== '1') popularExemplos(store, DEMO ? usuariosDemo() : {});
 
-  const senhaDono = auth.garantirDono();
+  const senhaDono = DEMO ? null : auth.garantirDono();
+  if (DEMO) console.log('\n  MODO DEMONSTRAÇÃO LIGADO: entrada em 1 toque na tela de login (DEMO=0 para desligar)');
   servidor.listen(PORTA, () => {
     const ip = enderecosLocais()[0] || 'localhost';
     console.log(`\n  ${loja.nome} - sistema de pedidos (versão ${VERSAO.slice(0, 7)})\n`);

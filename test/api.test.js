@@ -225,3 +225,9 @@ test('sair invalida a sessão', async () => {
   const r = await fetch(base + '/api/eu', { headers: { Cookie: cookie } });
   assert.equal(r.status, 401);
 });
+
+test('sem DEMO=1, não existe entrada em 1 toque', async () => {
+  assert.deepEqual((await chamar('GET', '/api/demo')).dados, { ativo: false });
+  assert.equal((await chamar('POST', '/api/demo/entrar', { corpo: { usuario: 'dono' } })).status, 404);
+  assert.equal((await chamar('POST', '/api/demo/restaurar', { quem: 'dono' })).status, 404);
+});

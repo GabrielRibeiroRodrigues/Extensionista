@@ -169,6 +169,44 @@ function criarAuth({ arquivo = null, agora = () => Date.now() } = {}) {
     return senha;
   }
 
+  // ---------- Modo demonstração ----------
+  // Cria (ou restaura) os perfis de demonstração com segredos conhecidos.
+  // Só perfis marcados como demo aceitam a entrada sem segredo.
+  function prepararDemo(perfis) {
+    for (const p of perfis) {
+      let u = buscarPorLogin(p.usuario);
+      if (!u) {
+        u = { id: proximoId++, usuario: p.usuario, criadoEm: new Date(agora()).toISOString() };
+        usuarios.push(u);
+      }
+      Object.assign(u, {
+        nome: p.nome,
+        cargo: p.cargo,
+        segredo: gerarHash(p.segredo),
+        trocarSegredo: false,
+        ativo: true,
+        demo: true,
+        falhas: 0,
+        bloqueadoAte: null,
+      });
+    }
+    salvar();
+  }
+
+  function perfisDemo() {
+    return usuarios.filter((u) => u.demo && u.ativo).map(publico);
+  }
+
+  function entrarDemo(login) {
+    const u = buscarPorLogin(login);
+    if (!u || !u.demo || !u.ativo) throw new ErroAuth('Perfil de demonstração não encontrado.', 404);
+    u.ultimoAcesso = new Date(agora()).toISOString();
+    const token = crypto.randomBytes(32).toString('base64url');
+    sessoes.push({ hash: hashToken(token), usuarioId: u.id, criadaEm: agora(), expiraEm: agora() + DURACAO_SESSAO_MS });
+    salvar();
+    return { token, usuario: daSessao(u) };
+  }
+
   // ---------- Login e sessões ----------
   function limiteIp(ip) {
     const registro = falhasPorIp.get(ip);
@@ -340,6 +378,9 @@ function criarAuth({ arquivo = null, agora = () => Date.now() } = {}) {
   return {
     eventos,
     garantirDono,
+    prepararDemo,
+    perfisDemo,
+    entrarDemo,
     entrar,
     sessao,
     sair,
