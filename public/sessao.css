@@ -35,12 +35,6 @@
 }
 .sessao-aviso[hidden] { display: none; }
 
-.selo-demo {
-  font-family: var(--fonte); font-size: 12px; font-weight: 800; color: var(--forno);
-  background: var(--papel); border: 2px dashed var(--forno); border-radius: 999px; padding: 3px 10px;
-  white-space: nowrap;
-}
-
 @media (max-width: 520px) {
   .cracha-texto { display: none; }
   .cracha summary { padding: 2px; }

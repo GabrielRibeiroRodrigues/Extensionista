@@ -105,13 +105,6 @@ const Sessao = (() => {
     alvo.querySelector('[data-sair]').addEventListener('click', sair);
     document.querySelectorAll('a.logo').forEach((a) => (a.href = usuario.inicio));
     if (demo) {
-      const selo = document.createElement('span');
-      selo.className = 'selo-demo';
-      selo.textContent = 'Demonstração';
-      alvo.prepend(selo);
-      alvo.style.display = 'flex';
-      alvo.style.alignItems = 'center';
-      alvo.style.gap = '10px';
       const restaurar = alvo.querySelector('[data-restaurar]');
       restaurar.hidden = !pode('painel');
       restaurar.addEventListener('click', async () => {
